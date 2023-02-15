@@ -1,0 +1,39 @@
+<launch>
+  <!-- Arguments -->
+  <arg name="robot_name" value="cube_stack_arm"/>
+  <arg name="model" default="$(find cube_stack_env)/urdf/cube_stack_arm.xacro"/>
+
+  <!-- start Gazebo with an empty world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="use_sim_time" value="true"/>
+    <arg name="debug" value="false"/>
+    <!-- <arg name="verbose" value="true"/> -->
+    <arg name="world_name" value="$(find cube_stack_env)/worlds/cube.world"/>
+  </include>
+  
+  <!--Spawns Robot inside a Gazebo simulation -->
+  <param name="/cube_stack_arm/robot_description"
+        command="xacro $(arg model)"/>
+  <node pkg="gazebo_ros" type="spawn_model" name="spawn_$(arg robot_name)" 
+        args="-x 0.0 -y 0.0 -z 0.05 -unpause -urdf -param /cube_stack_arm/robot_description -model $(arg robot_name)" respawn="false">
+  </node>
+
+   <!--Spawns Controller inside a Gazebo simulation -->
+  <rosparam command="load"
+            file="$(find cube_stack_env)/config/cube_stack_arm_control.yaml"/>
+  <node name="cube_stack_arm_controller_spawner" pkg="controller_manager" type="spawner"
+    ns="/cube_stack_arm" args="joint_state_controller arm_effort_controller"/>
+
+  <!--Setup TF -->
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" ns="/cube_stack_arm">
+    <param name="publish_frequency" type="double" value="30.0" />
+    <remap from="/joint_states" to="/cube_stack_arm/joint_states"/>
+    <remap from="/robot_description" to="/cube_stack_arm/robot_description" />
+  </node>
+  
+  <!--Setup manual control through GUI -->
+  <!-- <node name="rqt_joint_trajectory_controller" pkg="rqt_joint_trajectory_controller" type="rqt_joint_trajectory_controller">
+    <remap from="/robot_description" to="/cube_stack_arm/robot_description" />
+  </node> -->
+
+</launch>

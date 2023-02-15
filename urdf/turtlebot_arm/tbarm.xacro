@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:property name="joints_vlimit" value="0.571"/>
+    <xacro:property name="pan_llimit" value="-2.617"/>
+    <xacro:property name="pan_ulimit" value="2.617"/>
+    <xacro:property name="shoulder_llimit" value="-2.617"/>
+    <xacro:property name="shoulder_ulimit" value="2.617"/>
+    <xacro:property name="elbow_llimit" value="-2.617"/>
+    <xacro:property name="elbow_ulimit" value="2.617"/>
+    <xacro:property name="wrist_llimit" value="-1.745"/>
+    <xacro:property name="wrist_ulimit" value="1.745"/>
+
+    <!-- Included URDF Files -->   
+    <xacro:include filename="$(find cube_stack_env)/urdf/turtlebot_arm/turtlebot_arm.xacro"/>
+
+    <!-- <xacro:macro name="servo_transmission" params="name">
+      <transmission name="${name}_trans">
+        <type>transmission_interface/SimpleTransmission</type>
+        <actuator name="${name}_motor">
+          <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+        <joint name="${name}_joint">
+          <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+        </joint>
+      </transmission>
+    </xacro:macro> -->
+
+    <xacro:macro name="servo_transmission" params="name">
+      <transmission name="${name}_trans">
+        <type>transmission_interface/SimpleTransmission</type>
+        <actuator name="${name}_motor">
+          <mechanicalReduction>1</mechanicalReduction>
+        </actuator>
+        <joint name="${name}_joint">
+          <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        </joint>
+      </transmission>
+    </xacro:macro>
+
+    <xacro:servo_transmission name="arm_shoulder_pan"/>
+    <xacro:servo_transmission name="arm_shoulder_lift"/>
+    <xacro:servo_transmission name="arm_elbow_flex"/>
+    <xacro:servo_transmission name="arm_wrist_flex"/>
+    <xacro:servo_transmission name="gripper"/>
+
+</robot>
