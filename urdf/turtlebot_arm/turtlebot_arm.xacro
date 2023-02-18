@@ -3,6 +3,16 @@
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
   <xacro:include filename="$(find cube_stack_env)/urdf/turtlebot_arm/arm_hardware.xacro"/>
 
+  <xacro:property name="joints_vlimit" value="0.571"/>
+  <xacro:property name="pan_llimit" value="-2.617"/>
+  <xacro:property name="pan_ulimit" value="2.617"/>
+  <xacro:property name="shoulder_llimit" value="-2.617"/>
+  <xacro:property name="shoulder_ulimit" value="2.617"/>
+  <xacro:property name="elbow_llimit" value="-2.617"/>
+  <xacro:property name="elbow_ulimit" value="2.617"/>
+  <xacro:property name="wrist_llimit" value="-1.745"/>
+  <xacro:property name="wrist_ulimit" value="1.745"/>
+
   <material name="White">
     <color rgba="0.87 0.90 0.87 1.0"/>
   </material>
@@ -16,7 +26,7 @@
     <color rgba="0.22 0.32 0.14 1.0"/>
   </material>
 
-  <xacro:macro name="turtlebot_arm" params="parent color turtlebot_gripper gripper_color *origin">
+  <xacro:macro name="turtlebot_arm" params="parent color control gripper_color *origin">
     <link name="arm_base_link"/>
     <joint name="arm_base_joint" type="fixed">
       <xacro:insert_block name="origin"/>
@@ -84,10 +94,51 @@
       <origin xyz="0 0 0" rpy="0 0 0"/>
     </xacro:bioloid_F2_revolute>
 
-  <!-- gripper - Load Turtlebot gripper -->
-  <xacro:if value="${turtlebot_gripper}">
-  <xacro:include filename="$(find cube_stack_env)/urdf/turtlebot_arm/turtlebot_gripper.xacro"/>
-  </xacro:if>
+    <!-- gripper - Load Turtlebot gripper -->
+    <xacro:include filename="$(find cube_stack_env)/urdf/turtlebot_arm/turtlebot_gripper.xacro"/>
+
+    <xacro:if value="${control == 'position'}">
+      <xacro:macro name="servo_transmission" params="name">
+        <transmission name="${name}_trans">
+          <type>transmission_interface/SimpleTransmission</type>
+          <actuator name="${name}_motor">
+            <mechanicalReduction>1</mechanicalReduction>
+          </actuator>
+          <joint name="${name}_joint">
+            <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+          </joint>
+        </transmission>
+      </xacro:macro>
+    </xacro:if>
+
+    <xacro:if value="${control == 'effort'}">
+      <xacro:macro name="servo_transmission" params="name">
+        <transmission name="${name}_trans">
+          <type>transmission_interface/SimpleTransmission</type>
+          <actuator name="${name}_motor">
+            <mechanicalReduction>1</mechanicalReduction>
+          </actuator>
+          <joint name="${name}_joint">
+            <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+          </joint>
+        </transmission>
+      </xacro:macro>
+    </xacro:if>
+
+    <xacro:servo_transmission name="arm_shoulder_pan"/>
+    <xacro:servo_transmission name="arm_shoulder_lift"/>
+    <xacro:servo_transmission name="arm_elbow_flex"/>
+    <xacro:servo_transmission name="arm_wrist_flex"/>
+    <xacro:servo_transmission name="gripper"/>
+
+    <!-- Gazebo plugin for ROS Control -->
+    <gazebo>
+      <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+        <robotNamespace>/cube_stack_arm</robotNamespace>
+        <legacyModeNS>true</legacyModeNS>
+        <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+      </plugin>
+    </gazebo>
 
   </xacro:macro>
 

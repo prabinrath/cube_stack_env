@@ -1,37 +1,18 @@
 <?xml version="1.0"?>
 <robot name="cube_stack_arm" xmlns:xacro="http://ros.org/wiki/xacro">
 
-  <material name="blue">
-    <color rgba="0 0 0.8 1"/>
-  </material>
-
-  <material name="black">
-    <color rgba="0 0 0 1"/>
-  </material>
-
-  <material name="white">
-    <color rgba="1 1 1 1"/>
-  </material>
-
+  <!-- Attach Arm to Ground -->
   <link name="world"></link>
-  <xacro:include filename="$(find cube_stack_env)/urdf/turtlebot_arm/tbarm.xacro"/>
-  <xacro:turtlebot_arm parent="world" color="White" gripper_color="Green" turtlebot_gripper="true">
+
+  <xacro:include filename="$(find cube_stack_env)/urdf/turtlebot_arm/turtlebot_arm.xacro"/>
+  <xacro:turtlebot_arm parent="world" color="White" gripper_color="Green" control="effort">
     <origin xyz="0 0 0"/>
   </xacro:turtlebot_arm>
 
   <xacro:include filename="$(find cube_stack_env)/urdf/sensors.xacro"/>
-  <xacro:depth_camera camera_name="depth_camera" parent_link="arm_base_link">
+  <xacro:depth_camera camera_name="depth_camera" parent_link="arm_base_link" far_range="1.0">
     <box size="0.01 0.01 0.01"/>
-    <origin xyz="0.3 0 0.1" rpy="0 0 3.14"/>
+    <origin xyz="0.6 0 0.1" rpy="0 0 3.14"/>
   </xacro:depth_camera>
-
-  <!-- Gazebo plugin for ROS Control -->
-  <gazebo>
-    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
-      <robotNamespace>/cube_stack_arm</robotNamespace>
-      <legacyModeNS>true</legacyModeNS>
-      <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
-    </plugin>
-  </gazebo>
 
 </robot>

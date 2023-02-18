@@ -70,7 +70,7 @@
     </gazebo>
   </xacro:macro>
 
-  <xacro:macro name="depth_camera" params="camera_name parent_link *box *origin">
+  <xacro:macro name="depth_camera" params="camera_name parent_link far_range *box *origin">
     <link name="${camera_name}">
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -100,12 +100,12 @@
       <child link="${camera_name}"/>
     </joint>
 
-    <!-- <link name="camera_depth_link"></link>
+    <link name="camera_depth_link"></link>
     <joint name="camera_depth_joint" type="fixed">
       <origin xyz="0 0 0" rpy="-${pi/2} 0 -${pi/2} "/>
       <parent link="${camera_name}"/>
       <child link="camera_depth_link"/>
-    </joint>     -->
+    </joint>    
     <!-- Additional transformation link needed due to frame convention mismatch between gazebo and kinect in rviz
     https://answers.ros.org/question/218395/libgazebo_ros_openni_kinectso-depth-pointcloud-wrong-tf/ -->
 
@@ -121,7 +121,7 @@
           </image>
           <clip>
             <near>0.001</near>
-            <far>3</far>
+            <far>${far_range}</far>
           </clip>
         </camera>
         <plugin name="${camera_name}_controller" filename="libgazebo_ros_openni_kinect.so">
@@ -134,9 +134,10 @@
           <depthImageTopicName>/${camera_name}/depth/image_raw</depthImageTopicName>
           <depthImageInfoTopicName>/${camera_name}/depth/camera_info</depthImageInfoTopicName>
           <pointCloudTopicName>/${camera_name}/depth/points</pointCloudTopicName>
-          <frameName>${camera_name}</frameName>
+          <frameName>camera_depth_link</frameName>
           <pointCloudCutoff>0.001</pointCloudCutoff>
-          <pointCloudCutoffMax>3.0</pointCloudCutoffMax>
+          <!-- Less then clip range will publish NaN in pointcloud -->
+          <pointCloudCutoffMax>${far_range+1.0}</pointCloudCutoffMax>
           <distortionK1>0.00000001</distortionK1>
           <distortionK2>0.00000001</distortionK2>
           <distortionK3>0.00000001</distortionK3>
@@ -154,25 +155,25 @@
 
   <xacro:macro name="imu" params="imu_name parent_link *box *origin">
     <link name="${imu_name}">
-<!--       <collision>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry>
-          <xacro:insert_block name="box"/>
-        </geometry>
-      </collision> -->
+    <!-- <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <xacro:insert_block name="box"/>
+      </geometry>
+    </collision> -->
 
-      <visual>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry>
-          <xacro:insert_block name="box"/>
-        </geometry>
-      </visual>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <xacro:insert_block name="box"/>
+      </geometry>
+    </visual>
 
-<!--       <inertial>
-        <mass value="0.01" />
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <inertia ixx="5.3e-8" ixy="0" ixz="0" iyy="6.7e-9" iyz="0" izz="6.7e-9" />
-      </inertial> -->
+    <!-- <inertial>
+      <mass value="0.01" />
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="5.3e-8" ixy="0" ixz="0" iyy="6.7e-9" iyz="0" izz="6.7e-9" />
+    </inertial> -->
     </link>
 
     <joint name="${imu_name}_joint" type="fixed">
