@@ -12,7 +12,7 @@
   <xacro:include filename="$(find cube_stack_env)/urdf/sensors.xacro"/>
   <xacro:depth_camera camera_name="depth_camera" parent_link="arm_base_link" far_range="1.0">
     <box size="0.01 0.01 0.01"/>
-    <origin xyz="0.6 0 0.1" rpy="0 0 3.14"/>
+    <origin xyz="0.6 0 0.3" rpy="0 0.392 3.14"/>
   </xacro:depth_camera>
 
 </robot>

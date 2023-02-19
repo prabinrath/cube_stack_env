@@ -111,7 +111,7 @@
 
     <gazebo reference="${camera_name}">
       <sensor name="${camera_name}_camera" type="depth">
-        <update_rate>20</update_rate>
+        <update_rate>30</update_rate>
         <camera>
           <horizontal_fov>1.047198</horizontal_fov>
           <image>
@@ -128,7 +128,7 @@
           <baseline>0.2</baseline>
           <alwaysOn>true</alwaysOn>
           <updateRate>1.0</updateRate>
-          <cameraName>${camera_name}_ir</cameraName>
+          <cameraName>${camera_name}</cameraName>
           <imageTopicName>/${camera_name}/rgb/image_raw</imageTopicName>
           <cameraInfoTopicName>/${camera_name}/rgb/camera_info</cameraInfoTopicName>
           <depthImageTopicName>/${camera_name}/depth/image_raw</depthImageTopicName>

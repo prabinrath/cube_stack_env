@@ -55,33 +55,19 @@
       </link>
     </model>
 
-    <model name="cube1">
+    <model name="cube_base">
       <pose>0.15 0.15 0 0 0 0</pose>
       <include>
-        <uri>model://wood_cube_2_5cm</uri>
+        <uri>model://wood_cube_2_5cm_blue</uri>
       </include>
     </model>
 
-    <model name="cube2">
+    <model name="cube_pick">
       <pose>0.15 -0.15 0 0 0 0</pose>
       <include>
-        <uri>model://wood_cube_2_5cm</uri>
+        <uri>model://wood_cube_2_5cm_red</uri>
       </include>
     </model>
-
-    <!-- <model name="cube3">
-      <pose>0.15 0.1 0 0 0 0</pose>
-      <include>
-        <uri>model://wood_cube_2_5cm</uri>
-      </include>
-    </model> -->
-
-    <!-- <model name="bowl">
-      <pose>0.15 -0.15 0 0 0 0</pose>
-      <include>
-        <uri>model://bowl</uri>
-      </include>
-    </model> -->
-
+    
   </world>
 </sdf>
