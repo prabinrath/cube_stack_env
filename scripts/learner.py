@@ -40,4 +40,4 @@ class CubeStackRGBDPolicy(nn.Module):
 
         a = F.relu(self.fcc1(x))
         a = self.fcc2(a)
-        return a
+        return F.tanh(a)

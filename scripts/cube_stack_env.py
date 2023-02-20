@@ -2,6 +2,7 @@ import gym
 from gym import spaces
 
 import numpy as np
+import time
 from math import pi
 from threading import Lock
 import cv2
@@ -14,21 +15,25 @@ from std_srvs.srv import Empty
 from gazebo_msgs.srv import SetLinkState, GetLinkState
 from gazebo_msgs.msg import LinkState
 from geometry_msgs.msg import Pose
+from tf.transformations import quaternion_matrix
+from visualization_msgs.msg import Marker
 import rospy
 
 class CubeStackEnv(gym.Env):
-    def __init__(self, distance_threshold=0.005):
+    def __init__(self, dist_threshold=0.05, max_iter=1000):
         self.action_space = spaces.Box(-pi, pi, (6,), np.float32)
         self.observation_space = spaces.Box(0, 255, (4, 224, 224), np.float32)
         self.rgb_img, self.depth_img = None, None
         self.bridge = CvBridge()
         self.observation = np.zeros((4, 224, 224), dtype=np.float32)
         self.obs_lock = Lock()
-        self.distance_threshold = distance_threshold
+        self.dist_threshold = dist_threshold
         self.reward = None
-        # rospy.set_param('/use_sim_time', True)
+        self.max_iter = max_iter
+        self.iter = 0
+        rospy.set_param('/use_sim_time', True)
 
-        self.joint_lims = {
+        self.joint_pos_lims = {
             'pan': (-2.617, 2.617),
             'shoulder': (-2.617, 2.617),
             'elbow': (-2.617, 2.617),
@@ -44,10 +49,11 @@ class CubeStackEnv(gym.Env):
         self.agent_pub = rospy.Publisher('/cube_stack_arm/arm_effort_controller/command', Float64MultiArray, queue_size=2) # effort control
         self.agent_rgb_sub = rospy.Subscriber('/depth_camera/rgb/image_raw', Image, self.rgb_callback) # rgb observation
         self.agent_depth_sub = rospy.Subscriber('/depth_camera/depth/image_raw', Image, self.depth_callback) # depth observation
+
+        # self.grip_viz = rospy.Publisher('/ee', Marker, queue_size=2)
     
     def rgb_callback(self, msg):
-        img = self.bridge.imgmsg_to_cv2(msg)
-        cv2.imwrite('sample.jpg', img)
+        img = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
         img = cv2.resize(img, (224, 224))
         self.obs_lock.acquire()
         self.observation[:3,:,:] = np.moveaxis(img.astype(np.float32)/255.0, -1, 0)
@@ -68,13 +74,17 @@ class CubeStackEnv(gym.Env):
 
     def reset(self, seed=None):
         super().reset(seed=seed)
-        self.agent_pub.publish(Float64MultiArray(data=np.array([0.0, 0.0, 0.0, 0.0, 0.0])))
 
-        rospy.wait_for_service('/gazebo/pause_physics')
+        rospy.wait_for_service('/gazebo/unpause_physics')
         try:
-            self.pause()
+            self.unpause()
         except:
-            raise Exception('Pause Physics Failed')
+            raise Exception('Unpause Physics Failed')
+        
+        # reset controller
+        for _ in range(10):
+            self.agent_pub.publish(Float64MultiArray(data=np.array([0.0, 0.0, 0.0, 0.0, 0.0])))
+            time.sleep(0.05)
 
         rospy.wait_for_service('/gazebo/reset_simulation')
         try:
@@ -106,16 +116,84 @@ class CubeStackEnv(gym.Env):
             self.setlink_proxy(req)
         except:
             raise Exception('Set Link State Failed')
-        
+            
+        time.sleep(0.1) # wait for observation update
+        obs = self.get_obs()
+        self.iter = 0
+        rospy.loginfo('Environment Reset Done')
+
+        rospy.wait_for_service('/gazebo/pause_physics')
+        try:
+            self.pause()
+        except:
+            raise Exception('Pause Physics Failed')
+
+        return obs, None
+    
+    def get_marker(self, grip_pos):
+        marker = Marker()
+        marker.header.frame_id = "world"
+        marker.header.stamp = rospy.get_rostime()
+        marker.ns = ""
+        marker.id = 0
+        marker.type = Marker.SPHERE
+        marker.action = Marker.ADD
+        marker.pose.position.x = grip_pos[0][0]
+        marker.pose.position.y = grip_pos[1][0]
+        marker.pose.position.z = grip_pos[2][0]
+        marker.pose.orientation.x = 0
+        marker.pose.orientation.y = 0
+        marker.pose.orientation.z = 0
+        marker.pose.orientation.w = 1
+        marker.scale.x, marker.scale.y, marker.scale.z = 0.01, 0.01, 0.01 
+        marker.color.r = 0.0
+        marker.color.g = 1.0
+        marker.color.b = 0.0
+        marker.color.a = 1.0
+        marker.lifetime = rospy.Duration(0.5)
+        return marker
+
+    def get_reward(self, action):
+        rospy.wait_for_service('/gazebo/get_link_state')
+        gripper_state = self.getlink_proxy('cube_stack_arm::arm_wrist_flex_link', 'world')
+        link_pos = np.expand_dims(np.array([gripper_state.link_state.pose.position.x, 
+                            gripper_state.link_state.pose.position.y, 
+                            gripper_state.link_state.pose.position.z]), axis=1)
+        quat = gripper_state.link_state.pose.orientation
+        rot_mat = quaternion_matrix([quat.x, quat.y, quat.z, quat.w])[0:3,0:3]
+        local_offset = np.array([[0.0],[0.0],[0.1]]) # distance of end-effector in arm_wrist_flex_link frame
+        grip_pos = link_pos + rot_mat @ local_offset
+        # self.grip_viz.publish(self.get_marker(grip_pos))
+
+        rospy.wait_for_service('/gazebo/get_link_state')
+        cube_state = self.getlink_proxy('cube_pick::wood_cube_2_5cm_red::link', 'world')
+        dist = np.linalg.norm(np.squeeze(grip_pos) -
+                       np.array([cube_state.link_state.pose.position.x, 
+                                 cube_state.link_state.pose.position.y, 
+                                 cube_state.link_state.pose.position.z]))
+        reward = -dist - 1e-3*np.linalg.norm(action)
+        return dist, reward
+
+    def step(self, action):
+        self.iter += 1
         rospy.wait_for_service('/gazebo/unpause_physics')
         try:
             self.unpause()
         except:
             raise Exception('Unpause Physics Failed')
+        
+        for _ in range(10):
+            self.agent_pub.publish(Float64MultiArray(data=action))
+            time.sleep(0.001)
 
-        rospy.loginfo('Environment Reset Done')
-    
-    def step(self, action):
-        act = Float64MultiArray()
-        act.data = action
-        self.agent_pub.publish(act)   
+        obs = self.get_obs()
+
+        rospy.wait_for_service('/gazebo/pause_physics')
+        try:
+            self.pause()
+        except:
+            raise Exception('Pause Physics Failed')
+        
+        dist, reward = self.get_reward(action)
+        done = (self.iter > self.max_iter) or (dist < self.dist_threshold)
+        return obs, reward, done, None
