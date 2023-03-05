@@ -1,9 +1,8 @@
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 
 import numpy as np
 import time
-from math import pi
 from threading import Lock
 import cv2
 from cv_bridge import CvBridge
@@ -20,16 +19,19 @@ from visualization_msgs.msg import Marker
 import rospy
 
 class CubeStackEnv(gym.Env):
-    def __init__(self, dist_threshold=0.05, max_iter=1000):
-        self.action_space = spaces.Box(-pi, pi, (6,), np.float32)
-        self.observation_space = spaces.Box(0, 255, (4, 224, 224), np.float32)
+    metadata = {"render.modes": ["human"]}
+
+    def __init__(self, env_config):
+        rospy.init_node('cube_stack_rl_'+str(random.randint(0,1e5)))
+        self.action_space = spaces.Box(-10, 10, (5,), np.float32)
+        self.observation_space = spaces.Box(0, 5, (224, 224, 4), np.float32)
         self.rgb_img, self.depth_img = None, None
         self.bridge = CvBridge()
-        self.observation = np.zeros((4, 224, 224), dtype=np.float32)
+        self.observation = np.zeros((224, 224, 4), dtype=np.float32)
         self.obs_lock = Lock()
-        self.dist_threshold = dist_threshold
+        self.dist_threshold = env_config['dist_threshold']
         self.reward = None
-        self.max_iter = max_iter
+        self.max_iter = env_config['max_iter']
         self.iter = 0
         rospy.set_param('/use_sim_time', True)
 
@@ -56,14 +58,14 @@ class CubeStackEnv(gym.Env):
         img = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
         img = cv2.resize(img, (224, 224))
         self.obs_lock.acquire()
-        self.observation[:3,:,:] = np.moveaxis(img.astype(np.float32)/255.0, -1, 0)
+        self.observation[:,:,:3] = img.astype(np.float32)/255.0
         self.obs_lock.release()
 
     def depth_callback(self, msg):
         img = self.bridge.imgmsg_to_cv2(msg)
         img = cv2.resize(img, (224, 224))
         self.obs_lock.acquire()
-        self.observation[3,:,:] = img
+        self.observation[:,:,3] = img
         self.obs_lock.release()
     
     def get_obs(self):
@@ -72,7 +74,7 @@ class CubeStackEnv(gym.Env):
         self.obs_lock.release()
         return obs
 
-    def reset(self, seed=None):
+    def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
         rospy.wait_for_service('/gazebo/unpause_physics')
@@ -128,7 +130,7 @@ class CubeStackEnv(gym.Env):
         except:
             raise Exception('Pause Physics Failed')
 
-        return obs, None
+        return obs, {}
     
     def get_marker(self, grip_pos):
         marker = Marker()
@@ -161,12 +163,12 @@ class CubeStackEnv(gym.Env):
                             gripper_state.link_state.pose.position.z]), axis=1)
         quat = gripper_state.link_state.pose.orientation
         rot_mat = quaternion_matrix([quat.x, quat.y, quat.z, quat.w])[0:3,0:3]
-        local_offset = np.array([[0.0],[0.0],[0.1]]) # distance of end-effector in arm_wrist_flex_link frame
+        local_offset = np.array([[0.0],[0.0],[0.1]]) # distance to end-effector in arm_wrist_flex_link frame
         grip_pos = link_pos + rot_mat @ local_offset
         # self.grip_viz.publish(self.get_marker(grip_pos))
 
         rospy.wait_for_service('/gazebo/get_link_state')
-        cube_state = self.getlink_proxy('cube_pick::wood_cube_2_5cm_red::link', 'world')
+        cube_state = self.getlink_proxy('cube_pick::wood_cube_2_5cm_red::link', 'world') # location of red cube
         dist = np.linalg.norm(np.squeeze(grip_pos) -
                        np.array([cube_state.link_state.pose.position.x, 
                                  cube_state.link_state.pose.position.y, 
@@ -195,5 +197,6 @@ class CubeStackEnv(gym.Env):
             raise Exception('Pause Physics Failed')
         
         dist, reward = self.get_reward(action)
-        done = (self.iter > self.max_iter) or (dist < self.dist_threshold)
-        return obs, reward, done, None
+        done = dist < self.dist_threshold
+        truncated = self.iter > self.max_iter
+        return obs, reward, done, truncated, {}

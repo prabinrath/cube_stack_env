@@ -1,23 +1,35 @@
-import torch
-from garage.envs import GymEnv
-from garage import wrap_experiment
-from garage.torch import set_gpu_mode
-from garage.trainer import Trainer
-from garage.torch.algos import PPO
-from garage.sampler import RaySampler
-
+import rospy
 from cube_stack_env import CubeStackEnv
+import cv2
+import numpy as np
+import time
 
-@wrap_experiment
-def cube_stack_experiment(ctxt=None, seed=None):
-    env = GymEnv(CubeStackEnv, is_image=True, max_episode_length=1000)
-    trainer = Trainer(ctxt)
+def render_obs(obs):
+    rgb = obs[:,:,:3]
+    depth = obs[:,:,3]
+    cv2.imshow('rgb', rgb)
+    cv2.imshow('depth', depth)
+    cv2.waitKey(10)
 
-    # if torch.cuda.is_available():
-    #     set_gpu_mode(True)
-    #     algo.to()
-    
-    # trainer.setup(algo, env)
-    # trainer.train(n_epochs=100, batch_size=32)
+def main():
+    env_config={
+            'dist_threshold': 0.05,
+            'max_iter': 100,
+        }
+    env = CubeStackEnv(env_config)
+    for e in range(5):
+        obs, _ = env.reset()
+        done = False
+        truncated = False
+        episode_reward = 0
+        start = time.perf_counter()
+        while not (done or truncated):     
+            action = np.random.uniform(-1,1,(5,))*10
+            obs, reward, done, truncated, _ = env.step(action)
+            episode_reward += reward
+            render_obs(obs)
 
-cube_stack_experiment()
+        duration = time.perf_counter() - start
+        rospy.loginfo('Episode ' + str(e+1) + ' Reward: ' + str(episode_reward) + ' Duration: ' + str(duration))
+
+main()

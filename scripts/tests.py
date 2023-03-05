@@ -5,23 +5,27 @@ import numpy as np
 import time
 
 def render_obs(obs):
-    rgb = np.moveaxis(obs[:3,:,:], 0, -1)
-    depth = obs[3,:,:]
+    rgb = obs[:,:,:3]
+    depth = obs[:,:,3]
     cv2.imshow('rgb', rgb)
     cv2.imshow('depth', depth)
     cv2.waitKey(10)
 
 def main():
-    rospy.init_node('cube_stack_test')
-    env = CubeStackEnv(max_iter=100)
+    env_config={
+            'dist_threshold': 0.05,
+            'max_iter': 100,
+        }
+    env = CubeStackEnv(env_config)
     for e in range(5):
         obs, _ = env.reset()
         done = False
+        truncated = False
         episode_reward = 0
         start = time.perf_counter()
-        while not done:        
-            action = np.random.uniform(-1, 1, (5,))*10
-            obs, reward, done, _ = env.step(action)
+        while not (done or truncated):     
+            action = np.random.uniform(-1,1,(5,))*10
+            obs, reward, done, truncated, _ = env.step(action)
             episode_reward += reward
             render_obs(obs)
 
