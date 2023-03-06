@@ -1,5 +1,5 @@
-import gymnasium as gym
-from gymnasium import spaces
+import gym
+from gym import spaces
 
 import numpy as np
 import time
@@ -22,12 +22,14 @@ class CubeStackEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
 
     def __init__(self, env_config):
+        super(CubeStackEnv, self).__init__()
         rospy.init_node('cube_stack_rl_'+str(random.randint(0,1e5)))
-        self.action_space = spaces.Box(-10, 10, (5,), np.float32)
-        self.observation_space = spaces.Box(0, 5, (224, 224, 4), np.float32)
+
+        self.action_space = spaces.Box(-1, 1, (5,), np.float32)
+        self.observation_space = spaces.Box(0, 255, (224, 224, 4), np.uint8)
         self.rgb_img, self.depth_img = None, None
         self.bridge = CvBridge()
-        self.observation = np.zeros((224, 224, 4), dtype=np.float32)
+        self.observation = np.zeros((224, 224, 4), dtype=np.uint8)
         self.obs_lock = Lock()
         self.dist_threshold = env_config['dist_threshold']
         self.reward = None
@@ -58,14 +60,14 @@ class CubeStackEnv(gym.Env):
         img = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
         img = cv2.resize(img, (224, 224))
         self.obs_lock.acquire()
-        self.observation[:,:,:3] = img.astype(np.float32)/255.0
+        self.observation[:,:,:3] = img
         self.obs_lock.release()
 
     def depth_callback(self, msg):
         img = self.bridge.imgmsg_to_cv2(msg)
         img = cv2.resize(img, (224, 224))
         self.obs_lock.acquire()
-        self.observation[:,:,3] = img
+        self.observation[:,:,3] = (img*255.0).astype(np.uint8)
         self.obs_lock.release()
     
     def get_obs(self):
@@ -75,7 +77,7 @@ class CubeStackEnv(gym.Env):
         return obs
 
     def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
+        # super().reset(seed=seed)
 
         rospy.wait_for_service('/gazebo/unpause_physics')
         try:
@@ -130,7 +132,8 @@ class CubeStackEnv(gym.Env):
         except:
             raise Exception('Pause Physics Failed')
 
-        return obs, {}
+        # return obs, {}
+        return obs
     
     def get_marker(self, grip_pos):
         marker = Marker()
@@ -199,4 +202,5 @@ class CubeStackEnv(gym.Env):
         dist, reward = self.get_reward(action)
         done = dist < self.dist_threshold
         truncated = self.iter > self.max_iter
-        return obs, reward, done, truncated, {}
+        # return obs, reward, done, truncated, {}
+        return obs, reward, (done or truncated), {}

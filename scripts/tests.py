@@ -18,14 +18,16 @@ def main():
         }
     env = CubeStackEnv(env_config)
     for e in range(5):
-        obs, _ = env.reset()
+        # obs, _ = env.reset()
+        obs = env.reset()
         done = False
         truncated = False
         episode_reward = 0
         start = time.perf_counter()
         while not (done or truncated):     
-            action = np.random.uniform(-1,1,(5,))*10
-            obs, reward, done, truncated, _ = env.step(action)
+            action = env.action_space.sample()
+            # obs, reward, done, truncated, _ = env.step(action)
+            obs, reward, done, _ = env.step(action)
             episode_reward += reward
             render_obs(obs)
 

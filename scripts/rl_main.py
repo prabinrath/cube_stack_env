@@ -1,7 +1,7 @@
 import rospy
+from stable_baselines3 import SAC
 from cube_stack_env import CubeStackEnv
 import cv2
-import numpy as np
 import time
 
 def render_obs(obs):
@@ -17,15 +17,27 @@ def main():
             'max_iter': 100,
         }
     env = CubeStackEnv(env_config)
+    model = SAC("CnnPolicy", 
+                env, 
+                buffer_size=10000,
+                batch_size=32,
+                train_freq=(4, 'step'),
+                target_update_interval=5000,
+                verbose=1)
+    model.learn(total_timesteps=100000, log_interval=10)
+    model.save("sac_cube_stack")
+
     for e in range(5):
-        obs, _ = env.reset()
+        # obs, _ = env.reset()
+        obs = env.reset()
         done = False
         truncated = False
         episode_reward = 0
         start = time.perf_counter()
         while not (done or truncated):     
-            action = np.random.uniform(-1,1,(5,))*10
-            obs, reward, done, truncated, _ = env.step(action)
+            action, _states = model.predict(obs, deterministic=True)
+            # obs, reward, done, truncated, _ = env.step(action)
+            obs, reward, done, _ = env.step(action)
             episode_reward += reward
             render_obs(obs)
 
