@@ -26,7 +26,7 @@
     <color rgba="0.22 0.32 0.14 1.0"/>
   </material>
 
-  <xacro:macro name="turtlebot_arm" params="parent color control gripper_color *origin">
+  <xacro:macro name="turtlebot_arm" params="parent color control gripper *origin">
     <link name="arm_base_link"/>
     <joint name="arm_base_joint" type="fixed">
       <xacro:insert_block name="origin"/>
@@ -95,7 +95,12 @@
     </xacro:bioloid_F2_revolute>
 
     <!-- gripper - Load Turtlebot gripper -->
-    <xacro:include filename="$(find cube_stack_env)/urdf/turtlebot_arm/turtlebot_gripper.xacro"/>
+    <xacro:if value="${gripper == 'turtlebot'}">
+      <xacro:include filename="$(find cube_stack_env)/urdf/turtlebot_arm/turtlebot_gripper.xacro"/>
+    </xacro:if>
+    <xacro:if value="${gripper == 'pincher'}">
+      <xacro:include filename="$(find cube_stack_env)/urdf/turtlebot_arm/pincher_gripper.xacro"/>
+    </xacro:if>
 
     <xacro:if value="${control == 'position'}">
       <xacro:macro name="servo_transmission" params="name">

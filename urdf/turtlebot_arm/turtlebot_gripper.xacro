@@ -39,7 +39,7 @@
         </geometry>
       </collision>
     </link>
-    <xacro:finger_fixed parent="gripper_active_link" name="gripper_active_finger" color="${gripper_color}">
+    <xacro:finger_fixed parent="gripper_active_link" name="gripper_active_finger" color="Green">
       <origin xyz="0 0 ${F2_HEIGHT}" rpy="0 0 0"/>
     </xacro:finger_fixed>
 
@@ -47,7 +47,7 @@
     <xacro:bioloid_F3_fixed parent="gripper_servo_link" name="gripper_static" color="${color}">
       <origin xyz="0 0 ${-AX12_HEIGHT-F10_HEIGHT+0.001}" rpy="0 ${M_PI} 0"/>
     </xacro:bioloid_F3_fixed>
-    <xacro:finger_fixed parent="gripper_static_link" name="gripper_static_finger" color="${gripper_color}">
+    <xacro:finger_fixed parent="gripper_static_link" name="gripper_static_finger" color="Green">
       <origin xyz="0 0 0" rpy="0 0 ${M_PI}"/>
     </xacro:finger_fixed>
 

@@ -5,7 +5,7 @@
   <link name="world"></link>
 
   <xacro:include filename="$(find cube_stack_env)/urdf/turtlebot_arm/turtlebot_arm.xacro"/>
-  <xacro:turtlebot_arm parent="world" color="White" gripper_color="Green" control="effort">
+  <xacro:turtlebot_arm parent="world" color="White" gripper="pincher" control="effort">
     <origin xyz="0 0 0"/>
   </xacro:turtlebot_arm>
 

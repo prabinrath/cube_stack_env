@@ -336,7 +336,7 @@
   
     <xacro:macro name="pincher_gripper" params="name color *origin">
       <link name="${name}_link">
-      <xacro:box_inertia length="0.036" width="0.028" height="0.004" mass="0.00001"/>
+      <xacro:box_inertia length="0.036" width="0.028" height="0.004" mass="0.015"/>
       <visual>
         <xacro:insert_block name="origin"/>
         <geometry>
