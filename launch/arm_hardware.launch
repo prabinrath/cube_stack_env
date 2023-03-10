@@ -4,7 +4,7 @@
   <arg name="model" default="$(find cube_stack_env)/urdf/cube_stack_arm.xacro"/>
 
   <!-- Set essential parameters -->
-  <param name="/cube_stack_arm/dynamixel_ids" value="4,6,"/>
+  <param name="/cube_stack_arm/dynamixel_ids" value="1,2,3,4,5,"/>
   <param name="/cube_stack_arm/robot_description"
         command="xacro $(arg model)"/>
 
@@ -16,6 +16,6 @@
   </node>
 
   <!-- Launch Dynamixel controller -->
-  <!-- <node pkg="cube_stack_arm" type="sync_read_write_node" name="sync_read_write_node"> -->
+  <node pkg="cube_stack_env" type="sync_read_write_node" name="sync_read_write_node"/>
 
 </launch>

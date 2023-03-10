@@ -20,8 +20,8 @@
  * $ rosrun cube_stack_env sync_read_write_node
  *
  * Open terminal #3 (run one of below commands at a time)
- * $ rostopic pub /sync_set_positions cube_stack_env/SyncSetPositions "{id:[4,6], position:[200,800]}" --once
- * $ rosservice call /sync_get_positions "{id:[4,6]}"
+ * $ rostopic pub /cube_stack_arm/sync_set_positions cube_stack_env/SyncSetPositions "{id:[1,2,3,4,5], position:[511,511,511,511,511]}" --once
+ * $ rostopic echo /cube_stack_arm/joint_states
  *
  * Author: Jaehyun Shim, Prabin Kumar Rath
 *******************************************************************************/
@@ -31,8 +31,7 @@
 #include <string>
 #include <iostream>
 
-#include "std_msgs/String.h"
-#include "cube_stack_env/SyncGetPositions.h"
+#include "sensor_msgs/JointState.h"
 #include "cube_stack_env/SyncSetPositions.h"
 #include "dynamixel_sdk/dynamixel_sdk.h"
 
@@ -55,31 +54,6 @@ PortHandler *portHandler = PortHandler::getPortHandler(DEVICE_NAME);
 PacketHandler *packetHandler = PacketHandler::getPacketHandler(PROTOCOL_VERSION);
 
 GroupSyncWrite groupSyncWrite(portHandler, packetHandler, ADDR_GOAL_POSITION, 2);
-
-bool SyncGetPositionsCallback(
-  cube_stack_env::SyncGetPositions::Request & req,
-  cube_stack_env::SyncGetPositions::Response & res)
-{
-  uint8_t dxl_error = 0;
-  int dxl_comm_result = COMM_TX_FAIL;
-  uint16_t dxl_pos = -1;
-
-  // Position Value of X series is 4 byte data. For AX & MX(1.0) use 2 byte data(int16_t) for the Position Value.
-  std::vector<int16_t> position(req.id.size());
-
-  for(size_t i=0;i<req.id.size();i++){
-    dxl_comm_result = packetHandler->read2ByteTxRx(
-      portHandler, req.id[i], ADDR_PRESENT_POSITION, &dxl_pos, &dxl_error);
-    if (dxl_comm_result != COMM_SUCCESS) {
-      ROS_ERROR("Failed to get position for Dynamixel ID %d", req.id[i]);
-      return false;
-    }
-    position[i] = dxl_pos;
-  }
-
-  res.position = position;
-  return true;
-}
 
 void SyncSetPositionsCallback(const cube_stack_env::SyncSetPositions::ConstPtr & msg)
 {
@@ -129,9 +103,9 @@ int main(int argc, char ** argv)
     return -1;
   }
 
+  std::vector<int> ids;
   std::string dynamixel_ids;
   if (ros::param::get("/cube_stack_arm/dynamixel_ids", dynamixel_ids)){
-    std::vector<int> ids;
     int id = 0;
     for(size_t i=0;i<dynamixel_ids.size();i++){
       if(dynamixel_ids[i]==44){
@@ -141,6 +115,8 @@ int main(int argc, char ** argv)
       }
       id = 10*id + (int)dynamixel_ids[i] - 48;
     }
+
+    // Enable Torque
     for(size_t i=0;i<ids.size();i++){
       dxl_comm_result = packetHandler->write1ByteTxRx(
         portHandler, ids[i], ADDR_TORQUE_ENABLE, 1, &dxl_error);
@@ -149,9 +125,10 @@ int main(int argc, char ** argv)
         return -1;
       }
     }
+    // Set Motor Max Speed
     for(size_t i=0;i<ids.size();i++){
       dxl_comm_result = packetHandler->write2ByteTxRx(
-        portHandler, ids[i], ADDR_MOVING_SPEED, 901, &dxl_error); // 901 corresponds to 100 rev/min
+        portHandler, ids[i], ADDR_MOVING_SPEED, 50, &dxl_error); // 901 corresponds to 100 rev/min
       if (dxl_comm_result != COMM_SUCCESS) {
         ROS_ERROR("Failed to enable torque for Dynamixel ID %d", ids[i]);
         return -1;
@@ -159,10 +136,51 @@ int main(int argc, char ** argv)
     }
   }
 
+  ROS_INFO("Found %d Dynamixel IDs", (int)ids.size());
+  if (ids.size()==0){
+    ROS_ERROR("No Dynamixel IDs found in parameter server");
+    return 0;
+  }
+
   ros::NodeHandle nh;
-  ros::ServiceServer sync_get_position_srv = nh.advertiseService("/sync_get_positions", SyncGetPositionsCallback);
-  ros::Subscriber sync_set_position_sub = nh.subscribe("/sync_set_positions", 10, SyncSetPositionsCallback);
-  ros::spin();
+  ros::Subscriber sync_set_position_sub = nh.subscribe("/cube_stack_arm/sync_set_positions", 10, SyncSetPositionsCallback);
+  ros::Publisher position_feedback_pub = nh.advertise<sensor_msgs::JointState>("/cube_stack_arm/joint_states", 10);
+  
+  std::vector<std::string> joint_names = {"arm_shoulder_pan_joint", "arm_shoulder_lift_joint", "arm_elbow_flex_joint", "arm_wrist_flex_joint", "gripper_joint"};
+  std::vector<double> zero_vec(ids.size());
+  ros::Rate loop_rate(30);
+  while (ros::ok())
+  {
+    uint8_t dxl_error = 0;
+    int dxl_comm_result = COMM_TX_FAIL;
+    uint16_t dxl_var = -1;
+
+    // Position Value of X series is 4 byte data. For AX & MX(1.0) use 2 byte data(int16_t) for the Position Value.
+    std::vector<double> position(ids.size());
+
+    for(size_t i=0;i<ids.size();i++){
+      dxl_comm_result = packetHandler->read2ByteTxRx(
+        portHandler, ids[i], ADDR_PRESENT_POSITION, &dxl_var, &dxl_error);
+      if (dxl_comm_result != COMM_SUCCESS) {
+        ROS_ERROR("Failed to get position for Dynamixel ID %d", ids[i]);
+        return false;
+      }
+      position[i] = (150.0-(300.0/1023.0)*(double)dxl_var)*(3.14/180.0);
+    }
+
+    sensor_msgs::JointState msg;
+    msg.header.stamp = ros::Time::now();
+    msg.header.frame_id = "map";
+    msg.name = joint_names;
+    msg.position = position;
+    msg.velocity = zero_vec;
+    msg.effort = zero_vec;
+    position_feedback_pub.publish(msg);
+    ros::spinOnce();
+    loop_rate.sleep();
+  }
+
+  // ros::spin();
 
   portHandler->closePort();
   return 0;
