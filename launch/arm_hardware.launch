@@ -14,6 +14,7 @@
     <remap from="/joint_states" to="/cube_stack_arm/joint_states"/>
     <remap from="/robot_description" to="/cube_stack_arm/robot_description" />
   </node>
+  <node type="static_transform_publisher" name="static_transform_publisher" pkg="tf" args="0 0 0 0 0 0 world camera_link 100" />
 
   <!-- Launch Dynamixel controller -->
   <node pkg="cube_stack_env" type="sync_read_write_node" name="sync_read_write_node"/>
