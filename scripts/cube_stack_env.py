@@ -35,6 +35,7 @@ class CubeStackEnv(gym.Env):
         self.reward = None
         self.max_iter = env_config['max_iter']
         self.iter = 0
+        self.obstacle = env_config['obstacle']
         rospy.set_param('/use_sim_time', True)
 
         self.joint_pos_lims = {
@@ -96,10 +97,18 @@ class CubeStackEnv(gym.Env):
         except:
             raise Exception('Reset Simulation Failed')
         
+        rospy.wait_for_service('/gazebo/pause_physics')
+        try:
+            self.pause()
+        except:
+            raise Exception('Pause Physics Failed')
+
         rospy.wait_for_service('/gazebo/set_link_state')
+        cube_link_names = ['cube_base::wood_cube_2_5cm_blue::link', 'cube_pick::wood_cube_2_5cm_red::link']
+        idx = random.choice([0,1])
         try:
             req = LinkState()
-            req.link_name = 'cube_base::wood_cube_2_5cm_blue::link'
+            req.link_name = cube_link_names[idx]
             pose = Pose()
             pose.position.x = random.uniform(0.15, 0.18)
             pose.position.y = random.uniform(0.05, 0.18)
@@ -109,7 +118,7 @@ class CubeStackEnv(gym.Env):
             req.reference_frame = 'world'
             self.setlink_proxy(req)
             req = LinkState()
-            req.link_name = 'cube_pick::wood_cube_2_5cm_red::link'
+            req.link_name = cube_link_names[1-idx]
             pose = Pose()
             pose.position.x = random.uniform(0.15, 0.18)
             pose.position.y = random.uniform(-0.05, -0.18)
@@ -118,6 +127,17 @@ class CubeStackEnv(gym.Env):
             req.pose = pose
             req.reference_frame = 'world'
             self.setlink_proxy(req)
+            if self.obstacle:
+                req = LinkState()
+                req.link_name = 'obstacle_sphere::obstacle_sphere'
+                pose = Pose()
+                pose.position.x = random.uniform(0.15, 0.18)
+                pose.position.y = random.uniform(-0.18,0.18)
+                pose.position.z = 0.2
+                pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = 0, 0, 0, 1
+                req.pose = pose
+                req.reference_frame = 'world'
+                self.setlink_proxy(req)
         except:
             raise Exception('Set Link State Failed')
             
@@ -125,12 +145,6 @@ class CubeStackEnv(gym.Env):
         obs = self.get_obs()
         self.iter = 0
         rospy.loginfo('Environment Reset Done')
-
-        rospy.wait_for_service('/gazebo/pause_physics')
-        try:
-            self.pause()
-        except:
-            raise Exception('Pause Physics Failed')
 
         # return obs, {}
         return obs

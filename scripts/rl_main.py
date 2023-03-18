@@ -14,9 +14,11 @@ def render_obs(obs):
 def main():
     env_config={
             'dist_threshold': 0.05,
-            'max_iter': 100,
+            'max_iter': 500,
+            'obstacle': False
         }
     env = CubeStackEnv(env_config)
+
     model = SAC("CnnPolicy", 
                 env, 
                 buffer_size=10000,
@@ -26,6 +28,8 @@ def main():
                 verbose=1)
     model.learn(total_timesteps=100000, log_interval=10)
     model.save("sac_cube_stack")
+
+    # model = SAC.load('sac_cube_stack')
 
     for e in range(5):
         # obs, _ = env.reset()

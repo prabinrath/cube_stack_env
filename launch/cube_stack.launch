@@ -2,6 +2,7 @@
   <!-- Arguments -->
   <arg name="robot_name" value="cube_stack_arm"/>
   <arg name="model" default="$(find cube_stack_env)/urdf/cube_stack_arm.xacro"/>
+  <arg name="world" default="$(find cube_stack_env)/worlds/cube_obstacle.world"/>
 
   <!-- start Gazebo with an empty world -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -9,7 +10,7 @@
     <arg name="debug" value="false"/>
     <!-- <arg name="verbose" value="true"/> -->
     <!-- <arg name="headless" default="true"/> -->
-    <arg name="world_name" value="$(find cube_stack_env)/worlds/cube.world"/>
+    <arg name="world_name" value="$(arg world)"/>
   </include>
   
   <!--Spawns Robot inside a Gazebo simulation -->

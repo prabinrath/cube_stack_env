@@ -1,0 +1,117 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <world name="default">
+    <!-- A global light source -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <model name='ground_plane'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>100</mu>
+                <mu2>50</mu2>
+              </ode>
+            </friction>
+            <bounce/>
+            <contact>
+              <ode/>
+            </contact>
+          </surface>
+          <max_contacts>10</max_contacts>
+        </collision>
+        <visual name='visual'>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Grey</name>
+            </script>
+          </material>
+        </visual>
+        <velocity_decay>
+          <linear>0</linear>
+          <angular>0</angular>
+        </velocity_decay>
+        <self_collide>0</self_collide>
+        <kinematic>0</kinematic>
+        <gravity>1</gravity>
+      </link>
+    </model>
+
+    <model name="cube_base">
+      <pose>0.15 0.15 0 0 0 0</pose>
+      <include>
+        <uri>model://wood_cube_2_5cm_blue</uri>
+      </include>
+    </model>
+
+    <model name="cube_pick">
+      <pose>0.15 -0.15 0 0 0 0</pose>
+      <include>
+        <uri>model://wood_cube_2_5cm_red</uri>
+      </include>
+    </model>
+
+    <model name="obstacle_sphere">
+      <pose>0.15 0.15 0.25 0 0 0 0</pose>
+      <link name="obstacle_sphere">
+        <kinematic>true</kinematic>
+        <collision name="collision">
+          <geometry>
+            <sphere>
+              <radius>0.05</radius>
+            </sphere>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.0</mu>
+                <mu2>0.0</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <sphere>
+              <radius>0.05</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.6 0.3 0.0 1</ambient>
+            <diffuse>0.6 0.3 0.0 1</diffuse>
+            <specular>0 0 0 0</specular>
+            <emissive>0 0 0 1</emissive>
+          </material>
+        </visual>
+      </link>
+
+      <!-- <plugin name="random" filename="libRandomVelocityPlugin.so">
+        <link>obstacle_sphere</link>
+        <initial_velocity>0 0.5 0</initial_velocity>
+        <velocity_factor>0.5</velocity_factor>
+        <update_period>5</update_period>
+        <min_z>0</min_z>
+        <max_z>0</max_z>
+      </plugin> -->
+    </model>
+    
+  </world>
+</sdf>
