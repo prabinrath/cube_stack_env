@@ -190,7 +190,7 @@ class CubeStackEnv(gym.Env):
                        np.array([cube_state.link_state.pose.position.x, 
                                  cube_state.link_state.pose.position.y, 
                                  cube_state.link_state.pose.position.z]))
-        reward = -dist - 1e-3*np.linalg.norm(action)
+        reward = -dist - 0.1*np.linalg.norm(action)
         return dist, reward
 
     def step(self, action):

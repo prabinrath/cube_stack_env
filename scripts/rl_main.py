@@ -14,7 +14,7 @@ def render_obs(obs):
 def main():
     env_config={
             'dist_threshold': 0.05,
-            'max_iter': 500,
+            'max_iter': 100,
             'obstacle': False
         }
     env = CubeStackEnv(env_config)
@@ -24,9 +24,8 @@ def main():
                 buffer_size=10000,
                 batch_size=32,
                 train_freq=(4, 'step'),
-                target_update_interval=5000,
                 verbose=1)
-    model.learn(total_timesteps=100000, log_interval=10)
+    model.learn(total_timesteps=1000000, log_interval=10)
     model.save("sac_cube_stack")
 
     # model = SAC.load('sac_cube_stack')
