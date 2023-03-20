@@ -1,5 +1,6 @@
 import rospy
 from cube_stack_env import CubeStackEnv
+from stable_baselines3.common.env_checker import check_env
 import cv2
 import numpy as np
 import time
@@ -18,6 +19,8 @@ def main():
             'obstacle': False
         }
     env = CubeStackEnv(env_config)
+    # check_env(env)
+
     for e in range(5):
         # obs, _ = env.reset()
         obs = env.reset()
@@ -30,7 +33,8 @@ def main():
             # obs, reward, done, truncated, _ = env.step(action)
             obs, reward, done, _ = env.step(action)
             episode_reward += reward
-            render_obs(obs)
+            render_obs(obs["visual"])
+            # print(obs["joints"])
 
         duration = time.perf_counter() - start
         rospy.loginfo('Episode ' + str(e+1) + ' Reward: ' + str(episode_reward) + ' Duration: ' + str(duration))

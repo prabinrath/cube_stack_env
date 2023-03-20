@@ -1,5 +1,5 @@
 import gym
-from gym import spaces
+from gym.spaces import Dict, Box
 
 import numpy as np
 import time
@@ -7,12 +7,12 @@ from threading import Lock
 import cv2
 from cv_bridge import CvBridge
 import random
+import copy
 
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, JointState
 from std_msgs.msg import Float64MultiArray
 from std_srvs.srv import Empty
-from gazebo_msgs.srv import SetLinkState, GetLinkState
-from gazebo_msgs.msg import LinkState
+from gazebo_msgs.srv import GetLinkState, SetLinkState, SetLinkStateRequest, SetModelConfiguration, SetModelConfigurationRequest
 from geometry_msgs.msg import Pose
 from tf.transformations import quaternion_matrix
 from visualization_msgs.msg import Marker
@@ -25,11 +25,11 @@ class CubeStackEnv(gym.Env):
         super(CubeStackEnv, self).__init__()
         rospy.init_node('cube_stack_rl_'+str(random.randint(0,1e5)))
 
-        self.action_space = spaces.Box(-1, 1, (5,), np.float32)
-        self.observation_space = spaces.Box(0, 255, (224, 224, 4), np.uint8)
+        self.action_space = Box(-1, 1, (5,), np.float32)
+        self.observation_space = Dict({"visual": Box(0, 255, (224, 224, 4), np.uint8), "joints": Box(-np.pi, np.pi, (13,), np.float32)})
         self.rgb_img, self.depth_img = None, None
         self.bridge = CvBridge()
-        self.observation = np.zeros((224, 224, 4), dtype=np.uint8)
+        self.observation = {"visual": np.zeros((224, 224, 4), dtype=np.uint8), "joints": np.zeros((13,), dtype=np.float32)}
         self.obs_lock = Lock()
         self.dist_threshold = env_config['dist_threshold']
         self.reward = None
@@ -50,10 +50,11 @@ class CubeStackEnv(gym.Env):
         self.getlink_proxy = rospy.ServiceProxy('/gazebo/get_link_state', GetLinkState) # reward calculation
         self.unpause = rospy.ServiceProxy('/gazebo/unpause_physics', Empty) # reset gazebo
         self.pause = rospy.ServiceProxy('/gazebo/pause_physics', Empty) # reset gazebo
-        self.reset_proxy = rospy.ServiceProxy('/gazebo/reset_simulation', Empty) # reset gazebo
+        self.reset_model = rospy.ServiceProxy('/gazebo/set_model_configuration', SetModelConfiguration) # set model joints to init positions
         self.agent_pub = rospy.Publisher('/cube_stack_arm/arm_effort_controller/command', Float64MultiArray, queue_size=2) # effort control
         self.agent_rgb_sub = rospy.Subscriber('/depth_camera/rgb/image_raw', Image, self.rgb_callback) # rgb observation
         self.agent_depth_sub = rospy.Subscriber('/depth_camera/depth/image_raw', Image, self.depth_callback) # depth observation
+        self.joint_state_sub = rospy.Subscriber('/cube_stack_arm/joint_states', JointState, self.joint_state_callback, queue_size=2) # robot joint position observation
 
         # self.grip_viz = rospy.Publisher('/ee', Marker, queue_size=2)
     
@@ -61,19 +62,27 @@ class CubeStackEnv(gym.Env):
         img = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
         img = cv2.resize(img, (224, 224))
         self.obs_lock.acquire()
-        self.observation[:,:,:3] = img
+        self.observation["visual"][:,:,:3] = img
         self.obs_lock.release()
 
     def depth_callback(self, msg):
         img = self.bridge.imgmsg_to_cv2(msg)
         img = cv2.resize(img, (224, 224))
         self.obs_lock.acquire()
-        self.observation[:,:,3] = (img*255.0).astype(np.uint8)
+        self.observation["visual"][:,:,3] = (img*255.0).astype(np.uint8)
+        self.obs_lock.release()
+    
+    def joint_state_callback(self, msg):
+        position = np.array([msg.position[2], msg.position[1], msg.position[0], msg.position[3], msg.position[4]])
+        velocity = np.array([msg.velocity[2], msg.velocity[1], msg.velocity[0], msg.velocity[3], msg.velocity[4]])
+        grip_pos = self.get_grip_pos()
+        self.obs_lock.acquire()
+        self.observation["joints"] = np.concatenate((position, velocity, grip_pos), dtype=np.float32)
         self.obs_lock.release()
     
     def get_obs(self):
         self.obs_lock.acquire()
-        obs = self.observation
+        obs = copy.deepcopy(self.observation)
         self.obs_lock.release()
         return obs
 
@@ -90,61 +99,80 @@ class CubeStackEnv(gym.Env):
         for _ in range(10):
             self.agent_pub.publish(Float64MultiArray(data=np.array([0.0, 0.0, 0.0, 0.0, 0.0])))
             time.sleep(0.05)
-
-        rospy.wait_for_service('/gazebo/reset_simulation')
-        try:
-            self.reset_proxy()
-        except:
-            raise Exception('Reset Simulation Failed')
         
         rospy.wait_for_service('/gazebo/pause_physics')
         try:
             self.pause()
         except:
             raise Exception('Pause Physics Failed')
+        
+        # reset model
+        rospy.wait_for_service('/gazebo/set_model_configuration')
+        try:
+            req = SetModelConfigurationRequest()
+            req.model_name = 'cube_stack_arm'
+            req.urdf_param_name = '/cube_stack_arm/robot_description'
+            req.joint_names = ['arm_shoulder_pan_joint', 'arm_shoulder_lift_joint', 'arm_elbow_flex_joint', 'arm_wrist_flex_joint', 'gripper_joint']
+            req.joint_positions = [0.0, 0.0, 0.0, 0.0, 0.0]
+            self.reset_model(req)
+        except:
+            raise Exception('Model Reset Failed')
 
+        # reset cubes
         rospy.wait_for_service('/gazebo/set_link_state')
         cube_link_names = ['cube_base::wood_cube_2_5cm_blue::link', 'cube_pick::wood_cube_2_5cm_red::link']
         idx = random.choice([0,1])
         try:
-            req = LinkState()
-            req.link_name = cube_link_names[idx]
+            req = SetLinkStateRequest()
+            req.link_state.link_name = cube_link_names[idx]
             pose = Pose()
             pose.position.x = random.uniform(0.15, 0.18)
             pose.position.y = random.uniform(0.05, 0.18)
             pose.position.z = 0.0125
             pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = 0, 0, 0, 1
-            req.pose = pose
-            req.reference_frame = 'world'
+            req.link_state.pose = pose
+            req.link_state.reference_frame = 'world'
             self.setlink_proxy(req)
-            req = LinkState()
-            req.link_name = cube_link_names[1-idx]
+            req = SetLinkStateRequest()
+            req.link_state.link_name = cube_link_names[1-idx]
             pose = Pose()
             pose.position.x = random.uniform(0.15, 0.18)
             pose.position.y = random.uniform(-0.05, -0.18)
             pose.position.z = 0.0125
             pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = 0, 0, 0, 1
-            req.pose = pose
-            req.reference_frame = 'world'
+            req.link_state.pose = pose
+            req.link_state.reference_frame = 'world'
             self.setlink_proxy(req)
             if self.obstacle:
-                req = LinkState()
-                req.link_name = 'obstacle_sphere::obstacle_sphere'
+                req = SetLinkStateRequest()
+                req.link_state.link_name = 'obstacle_sphere::obstacle_sphere'
                 pose = Pose()
                 pose.position.x = random.uniform(0.15, 0.18)
                 pose.position.y = random.uniform(-0.18,0.18)
                 pose.position.z = 0.2
                 pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = 0, 0, 0, 1
-                req.pose = pose
-                req.reference_frame = 'world'
+                req.link_state.pose = pose
+                req.link_state.reference_frame = 'world'
                 self.setlink_proxy(req)
         except:
             raise Exception('Set Link State Failed')
             
-        time.sleep(0.1) # wait for observation update
+        rospy.wait_for_service('/gazebo/unpause_physics')
+        try:
+            self.unpause()
+        except:
+            raise Exception('Unpause Physics Failed')
+        
+        time.sleep(0.1) # wait for observation
         obs = self.get_obs()
         self.iter = 0
         rospy.loginfo('Environment Reset Done')
+
+        rospy.wait_for_service('/gazebo/pause_physics')
+        try:
+            self.pause()
+        except:
+            raise Exception('Pause Physics Failed')
 
         # return obs, {}
         return obs
@@ -172,7 +200,7 @@ class CubeStackEnv(gym.Env):
         marker.lifetime = rospy.Duration(0.5)
         return marker
 
-    def get_reward(self, action):
+    def get_grip_pos(self):
         rospy.wait_for_service('/gazebo/get_link_state')
         gripper_state = self.getlink_proxy('cube_stack_arm::arm_wrist_flex_link', 'world')
         link_pos = np.expand_dims(np.array([gripper_state.link_state.pose.position.x, 
@@ -182,11 +210,15 @@ class CubeStackEnv(gym.Env):
         rot_mat = quaternion_matrix([quat.x, quat.y, quat.z, quat.w])[0:3,0:3]
         local_offset = np.array([[0.0],[0.0],[0.1]]) # distance to end-effector in arm_wrist_flex_link frame
         grip_pos = link_pos + rot_mat @ local_offset
+        return np.squeeze(grip_pos)
+
+    def get_reward(self, action):
+        grip_pos = self.get_grip_pos()
         # self.grip_viz.publish(self.get_marker(grip_pos))
 
         rospy.wait_for_service('/gazebo/get_link_state')
         cube_state = self.getlink_proxy('cube_pick::wood_cube_2_5cm_red::link', 'world') # location of red cube
-        dist = np.linalg.norm(np.squeeze(grip_pos) -
+        dist = np.linalg.norm(grip_pos -
                        np.array([cube_state.link_state.pose.position.x, 
                                  cube_state.link_state.pose.position.y, 
                                  cube_state.link_state.pose.position.z]))

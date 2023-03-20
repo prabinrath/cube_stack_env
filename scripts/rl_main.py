@@ -23,7 +23,6 @@ def main():
                 env, 
                 buffer_size=10000,
                 batch_size=32,
-                train_freq=(4, 'step'),
                 verbose=1)
     model.learn(total_timesteps=1000000, log_interval=10)
     model.save("sac_cube_stack")
@@ -38,7 +37,7 @@ def main():
         episode_reward = 0
         start = time.perf_counter()
         while not (done or truncated):     
-            action, _states = model.predict(obs, deterministic=True)
+            action, _ = model.predict(obs, deterministic=True)
             # obs, reward, done, truncated, _ = env.step(action)
             obs, reward, done, _ = env.step(action)
             episode_reward += reward
