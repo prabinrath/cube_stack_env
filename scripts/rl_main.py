@@ -19,17 +19,18 @@ def main():
         }
     env = CubeStackEnv(env_config)
 
-    model = SAC("CnnPolicy", 
-                env, 
-                buffer_size=10000,
-                batch_size=32,
-                verbose=1)
-    model.learn(total_timesteps=1000000, log_interval=10)
-    model.save("sac_cube_stack")
+    # model = SAC("MultiInputPolicy", 
+    #             env, 
+    #             buffer_size=10000,
+    #             batch_size=32,
+    #             verbose=1)
+    
+    # # print(model.policy)
+    # model.learn(total_timesteps=100000, log_interval=10)
+    # model.save("sac_cube_stack")
 
-    # model = SAC.load('sac_cube_stack')
-
-    for e in range(5):
+    model = SAC.load('sac_cube_stack')
+    for e in range(15):
         # obs, _ = env.reset()
         obs = env.reset()
         done = False
@@ -41,7 +42,7 @@ def main():
             # obs, reward, done, truncated, _ = env.step(action)
             obs, reward, done, _ = env.step(action)
             episode_reward += reward
-            render_obs(obs)
+            render_obs(obs["visual"])
 
         duration = time.perf_counter() - start
         rospy.loginfo('Episode ' + str(e+1) + ' Reward: ' + str(episode_reward) + ' Duration: ' + str(duration))
