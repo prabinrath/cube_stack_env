@@ -166,6 +166,12 @@ int main(int argc, char ** argv)
         return false;
       }
       position[i] = (150.0-(300.0/1023.0)*(double)dxl_var)*(3.14/180.0);
+      if(i==0){ // TODO: fix this workaround
+        position[i] = -position[i];
+      }
+      if(i==4){ // Presmatic output for gripper
+        position[i] = 0.024 - 2*(dxl_var*0.0334-2.7511)/1000;
+      }
     }
 
     sensor_msgs::JointState msg;
