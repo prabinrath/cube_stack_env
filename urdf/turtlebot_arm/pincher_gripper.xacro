@@ -28,7 +28,7 @@
     </xacro:pincher_gripper>
 
     <joint name="gripper2_joint" type="fixed">
-      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <origin xyz="0 0.04 0" rpy="0 0 0"/>
       <axis xyz="1 0 0"/>
       <parent link="gripper_servo_link"/>
       <child link="gripper_active2_link"/>
@@ -36,7 +36,7 @@
 
     <!-- Finger 2 --> 
     <xacro:pincher_gripper name="gripper_active2" color="Green" >
-      <origin xyz="0.025 0.04 0.0" rpy="${-M_PI/2} 0 0"/>
+      <origin xyz="0.025 0 0.0" rpy="${-M_PI/2} 0 0"/>
     </xacro:pincher_gripper>
 
     <gazebo reference="gripper_active_link">
