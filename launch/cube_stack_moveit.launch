@@ -11,8 +11,9 @@
   <arg name="disable_capabilities" default=""/>
 
   <!-- Load Robot Configurations -->
+  <param name="/cube_stack_arm/robot_description"
+        command="xacro $(arg model)"/>
   <include file="$(find cube_stack_moveit_config)/launch/planning_context.launch">
-    <arg name="load_robot_description" value="true" />
     <arg name="robot_description" value="/cube_stack_arm/robot_description"/>
   </include>
 
@@ -33,6 +34,8 @@
   <!--Spawns Controller inside a Gazebo simulation -->
   <rosparam command="load"
             file="$(find cube_stack_env)/config/cube_stack_arm_control.yaml"/>
+  <!-- <node name="cube_stack_arm_controller_spawner" pkg="controller_manager" type="spawner"
+    ns="/cube_stack_arm" args="joint_state_controller arm_trajectory_position_controller gripper_trajectory_position_controller"/> -->
   <node name="cube_stack_arm_controller_spawner" pkg="controller_manager" type="spawner"
     ns="/cube_stack_arm" args="joint_state_controller arm_trajectory_effort_controller gripper_trajectory_effort_controller"/>
 

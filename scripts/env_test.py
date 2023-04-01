@@ -16,7 +16,8 @@ def main():
     env_config={
             'dist_threshold': 0.05,
             'max_iter': 100,
-            'obstacle': False
+            'obstacle': True,
+            'num_obstacles': 2
         }
     env = CubeStackEnv(env_config)
     # check_env(env)
@@ -28,6 +29,7 @@ def main():
         truncated = False
         episode_reward = 0
         start = time.perf_counter()
+
         while not (done or truncated):     
             action = env.action_space.sample()
             # obs, reward, done, truncated, _ = env.step(action)

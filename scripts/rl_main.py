@@ -29,7 +29,7 @@ def main():
     # model.learn(total_timesteps=100000, log_interval=10)
     # model.save("sac_cube_stack")
 
-    model = SAC.load('sac_cube_stack')
+    model = SAC.load('sac_cube_stack_reacher')
     for e in range(15):
         # obs, _ = env.reset()
         obs = env.reset()

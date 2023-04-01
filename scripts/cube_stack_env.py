@@ -12,11 +12,12 @@ import copy
 from sensor_msgs.msg import Image, JointState
 from std_msgs.msg import Float64MultiArray
 from std_srvs.srv import Empty
-from gazebo_msgs.srv import GetLinkState, SetLinkState, SetLinkStateRequest, SetModelConfiguration, SetModelConfigurationRequest
+from gazebo_msgs.srv import GetLinkState, SpawnModel, SetLinkState, SetLinkStateRequest, SetModelConfiguration, SetModelConfigurationRequest
 from geometry_msgs.msg import Pose
 from tf.transformations import quaternion_matrix
 from visualization_msgs.msg import Marker
 import rospy
+import rospkg
 
 class CubeStackEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
@@ -56,6 +57,19 @@ class CubeStackEnv(gym.Env):
         self.agent_depth_sub = rospy.Subscriber('/depth_camera/depth/image_raw', Image, self.depth_callback) # depth observation
         self.joint_state_sub = rospy.Subscriber('/cube_stack_arm/joint_states', JointState, self.joint_state_callback, queue_size=2) # robot joint position observation
 
+        if self.obstacle:
+            self.num_obstacles = env_config['num_obstacles']
+            assert(self.num_obstacles<=3)
+            self.spawn_model_proxy = rospy.ServiceProxy('/gazebo/spawn_sdf_model', SpawnModel) # spawn obstacles
+            self.obstacle_model_sdf = open(rospkg.RosPack().get_path('cube_stack_env')+'/worlds/obstacle_sphere.sdf', 'r').read()
+            rospy.wait_for_service('/gazebo/set_model_state')
+            for i in range(self.num_obstacles):
+                pose = Pose()
+                pose.position.x = 0.15
+                pose.position.y = 0.0
+                pose.position.z = i*0.3/self.num_obstacles + 0.15
+                pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = 0, 0, 0, 1
+                self.spawn_model_proxy('obs_'+str(i+1), self.obstacle_model_sdf, "", pose, 'world')
         # self.grip_viz = rospy.Publisher('/ee', Marker, queue_size=2)
     
     def rgb_callback(self, msg):
@@ -75,7 +89,7 @@ class CubeStackEnv(gym.Env):
     def joint_state_callback(self, msg):
         position = np.array([msg.position[2], msg.position[1], msg.position[0], msg.position[3], msg.position[4]])
         velocity = np.array([msg.velocity[2], msg.velocity[1], msg.velocity[0], msg.velocity[3], msg.velocity[4]])
-        grip_pos = self.get_grip_pos()
+        grip_pos = self.get_grip_pos('cube_stack_arm::arm_wrist_flex_link', np.array([[0.0],[0.0],[0.1]]))
         self.obs_lock.acquire()
         self.observation["joints"] = np.concatenate((position, velocity, grip_pos), dtype=np.float32)
         self.obs_lock.release()
@@ -126,8 +140,11 @@ class CubeStackEnv(gym.Env):
             req = SetLinkStateRequest()
             req.link_state.link_name = cube_link_names[idx]
             pose = Pose()
-            pose.position.x = random.uniform(0.15, 0.18)
-            pose.position.y = random.uniform(0.05, 0.18)
+            dist = random.uniform(0.13, 0.18)
+            th = random.uniform(-np.pi/2, np.pi/2)
+            cube1_pos = (dist*np.cos(th), dist*np.sin(th))
+            pose.position.x = cube1_pos[0]
+            pose.position.y = cube1_pos[1]
             pose.position.z = 0.0125
             pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = 0, 0, 0, 1
             req.link_state.pose = pose
@@ -136,24 +153,33 @@ class CubeStackEnv(gym.Env):
             req = SetLinkStateRequest()
             req.link_state.link_name = cube_link_names[1-idx]
             pose = Pose()
-            pose.position.x = random.uniform(0.15, 0.18)
-            pose.position.y = random.uniform(-0.05, -0.18)
+            dist = random.uniform(0.13, 0.18)
+            th = random.uniform(-np.pi/2, np.pi/2)
+            cube2_pos = (dist*np.cos(th), dist*np.sin(th))
+            while abs(cube2_pos[0]-cube1_pos[0]) + abs(cube2_pos[1]-cube1_pos[1]) < 0.1:
+                dist = random.uniform(0.13, 0.18)
+                th = random.uniform(-np.pi/2, np.pi/2)
+                cube2_pos = (dist*np.cos(th), dist*np.sin(th))
+            pose.position.x = cube2_pos[0]
+            pose.position.y = cube2_pos[1]
             pose.position.z = 0.0125
             pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = 0, 0, 0, 1
             req.link_state.pose = pose
             req.link_state.reference_frame = 'world'
             self.setlink_proxy(req)
             if self.obstacle:
-                req = SetLinkStateRequest()
-                req.link_state.link_name = 'obstacle_sphere::obstacle_sphere'
-                pose = Pose()
-                pose.position.x = random.uniform(0.15, 0.18)
-                pose.position.y = random.uniform(-0.18,0.18)
-                pose.position.z = 0.2
-                pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = 0, 0, 0, 1
-                req.link_state.pose = pose
-                req.link_state.reference_frame = 'world'
-                self.setlink_proxy(req)
+                for i in range(self.num_obstacles):
+                    req = SetLinkStateRequest()
+                    req.link_state.link_name = 'obs_'+str(i+1)+'::obstacle_sphere'
+                    dist = random.uniform(0.13, 0.18)
+                    th = random.uniform(-np.pi/2, np.pi/2)
+                    obs_pos = (dist*np.cos(th), dist*np.sin(th))
+                    pose.position.x = obs_pos[0]
+                    pose.position.y = obs_pos[1]
+                    pose.position.z = i*0.3/self.num_obstacles + 0.15
+                    req.link_state.pose = pose
+                    req.link_state.reference_frame = 'world'
+                    self.setlink_proxy(req)
         except:
             raise Exception('Set Link State Failed')
             
@@ -200,20 +226,20 @@ class CubeStackEnv(gym.Env):
         marker.lifetime = rospy.Duration(0.5)
         return marker
 
-    def get_grip_pos(self):
+    def get_grip_pos(self, ref_link, local_offset):
         rospy.wait_for_service('/gazebo/get_link_state')
-        gripper_state = self.getlink_proxy('cube_stack_arm::arm_wrist_flex_link', 'world')
+        gripper_state = self.getlink_proxy(ref_link, 'world')
         link_pos = np.expand_dims(np.array([gripper_state.link_state.pose.position.x, 
                             gripper_state.link_state.pose.position.y, 
                             gripper_state.link_state.pose.position.z]), axis=1)
         quat = gripper_state.link_state.pose.orientation
         rot_mat = quaternion_matrix([quat.x, quat.y, quat.z, quat.w])[0:3,0:3]
-        local_offset = np.array([[0.0],[0.0],[0.1]]) # distance to end-effector in arm_wrist_flex_link frame
+        # local_offset is distance to end-effector in ref_link frame
         grip_pos = link_pos + rot_mat @ local_offset
         return np.squeeze(grip_pos)
 
     def get_reward(self, action):
-        grip_pos = self.get_grip_pos()
+        grip_pos = self.get_grip_pos('cube_stack_arm::arm_wrist_flex_link', np.array([[0.0],[0.0],[0.1]]))
         # self.grip_viz.publish(self.get_marker(grip_pos))
 
         rospy.wait_for_service('/gazebo/get_link_state')
