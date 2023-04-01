@@ -16,7 +16,7 @@ def main():
     env_config={
             'dist_threshold': 0.05,
             'max_iter': 100,
-            'obstacle': True,
+            'obstacle': False,
             'num_obstacles': 2
         }
     env = CubeStackEnv(env_config)
