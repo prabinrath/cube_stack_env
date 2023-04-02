@@ -23,7 +23,10 @@
                 <mu2>50</mu2>
               </ode>
             </friction>
-            <bounce/>
+            <bounce>
+              <restitution_coefficient>0.0</restitution_coefficient>
+              <threshold>100000.0</threshold>
+            </bounce>
             <contact>
               <ode/>
             </contact>

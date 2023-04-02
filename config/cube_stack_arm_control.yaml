@@ -64,6 +64,6 @@ cube_stack_arm:
     gains:
       gripper_joint:
         p: 100
-        d: 0
+        d: 10
         i: 1
         i_clamp: 1
