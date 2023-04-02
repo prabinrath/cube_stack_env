@@ -1,6 +1,5 @@
 from cube_stack_env import CubeStackEnv
 from moveit_handler import MoveItHandler
-import numpy as np
 import rospy
 BASE_Z_OFFSET = 0.05
 
@@ -18,7 +17,6 @@ def main():
     rospy.wait_for_service('/gazebo/get_link_state')
     cube_state = env.getlink_proxy('cube_pick::wood_cube_2_5cm_red::link', 'world').link_state.pose.position # location of red cube
     robot_mp.gripper_open()
-    robot_mp.move_to([cube_state.x, cube_state.y, cube_state.z-BASE_Z_OFFSET+0.03])
     robot_mp.move_to([cube_state.x, cube_state.y, cube_state.z-BASE_Z_OFFSET])
     robot_mp.gripper_close()
     rospy.wait_for_service('/gazebo/get_link_state')

@@ -96,9 +96,9 @@
   </node>
 
   <!-- RViz -->
-  <node name="cube_stack_moveit_rviz" pkg="rviz" type="rviz" respawn="false"
+  <!-- <node name="cube_stack_moveit_rviz" pkg="rviz" type="rviz" respawn="false"
         args="-d $(find cube_stack_env)/rviz/cube_world_moveit.rviz" output="screen">
-  </node>
+  </node> -->
 
   <!--Setup manual control through GUI -->
   <!-- <node name="rqt_joint_trajectory_controller" pkg="rqt_joint_trajectory_controller" type="rqt_joint_trajectory_controller">

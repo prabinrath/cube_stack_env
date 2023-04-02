@@ -24,7 +24,7 @@ class CubeStackEnv(gym.Env):
 
     def __init__(self, env_config):
         super(CubeStackEnv, self).__init__()
-        rospy.init_node('cube_stack_rl_'+str(random.randint(0,1e5)))
+        rospy.init_node('cube_stack_env_'+str(random.randint(0,1e5)))
 
         self.action_space = Box(-1, 1, (5,), np.float32)
         self.observation_space = Dict({"visual": Box(0, 255, (224, 224, 4), np.uint8), "joints": Box(-np.pi, np.pi, (13,), np.float32)})
