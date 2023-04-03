@@ -1,0 +1,108 @@
+<launch>
+  <!-- Arguments -->
+  <arg name="robot_name" value="cube_stack_arm"/>
+  <arg name="model" default="$(find cube_stack_env)/urdf/cube_stack_arm.xacro"/>
+  <arg name="world" default="$(find cube_stack_env)/worlds/cube.world"/>
+  <arg name="pipeline" default="ompl" />
+  <arg name="allow_trajectory_execution" default="true"/>
+  <arg name="max_safe_path_cost" default="1"/>
+  <arg name="publish_monitored_planning_scene" default="true"/>
+  <arg name="capabilities" default=""/>
+  <arg name="disable_capabilities" default=""/>
+
+  <!-- Load Robot Configurations -->
+  <param name="/cube_stack_arm/robot_description"
+        command="xacro $(arg model)"/>
+  <include file="$(find cube_stack_moveit_config)/launch/planning_context.launch">
+    <arg name="robot_description" value="/cube_stack_arm/robot_description"/>
+  </include>
+
+  <!-- start Gazebo with an empty world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="use_sim_time" value="true"/>
+    <arg name="debug" value="false"/>
+    <!-- <arg name="verbose" value="true"/> -->
+    <arg name="world_name" value="$(arg world)"/>
+    <arg name="gui" default="true"/>
+  </include>
+  
+  <!--Spawns Robot inside a Gazebo simulation -->
+  <node pkg="gazebo_ros" type="spawn_model" name="spawn_$(arg robot_name)" 
+        args="-x 0.0 -y 0.0 -z 0.05 -unpause -urdf -param /cube_stack_arm/robot_description -model $(arg robot_name)" respawn="false">
+  </node>
+
+  <!--Spawns Controller inside a Gazebo simulation -->
+  <rosparam command="load"
+            file="$(find cube_stack_env)/config/cube_stack_arm_control.yaml"/>
+  <!-- <node name="cube_stack_arm_controller_spawner" pkg="controller_manager" type="spawner"
+    ns="/cube_stack_arm" args="joint_state_controller arm_trajectory_position_controller gripper_trajectory_position_controller"/> -->
+  <node name="cube_stack_arm_controller_spawner" pkg="controller_manager" type="spawner"
+    ns="/cube_stack_arm" args="joint_state_controller arm_trajectory_effort_controller gripper_trajectory_effort_controller"/>
+
+  <!--Setup TF -->
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" ns="/cube_stack_arm">
+    <param name="publish_frequency" type="double" value="30.0" />
+    <remap from="joint_states" to="/cube_stack_arm/joint_states"/>
+    <remap from="robot_description" to="/cube_stack_arm/robot_description" />
+  </node>
+
+  <group ns="move_group/planning_pipelines">
+    <!-- OMPL -->
+    <include file="$(find cube_stack_moveit_config)/launch/planning_pipeline.launch.xml">
+      <arg name="pipeline" value="ompl" />
+    </include>
+    <!-- CHOMP -->
+    <include file="$(find cube_stack_moveit_config)/launch/planning_pipeline.launch.xml">
+      <arg name="pipeline" value="chomp" />
+    </include>
+  </group>
+
+  <!-- Sensors Functionality -->
+  <include ns="move_group" file="$(find cube_stack_moveit_config)/launch/sensor_manager.launch.xml" if="$(arg allow_trajectory_execution)">
+    <arg name="moveit_sensor_manager" value="cube_stack_arm" />
+  </include>
+
+  <!-- Start the actual move_group node/action server -->
+  <node name="move_group" launch-prefix="" pkg="moveit_ros_move_group" type="move_group" respawn="false" output="screen" args="--debug">
+    <!-- Set the display variable, in case OpenGL code is used internally -->
+    <env name="DISPLAY" value="$(optenv DISPLAY :0)" />
+
+    <param name="allow_trajectory_execution" value="$(arg allow_trajectory_execution)"/>
+    <param name="sense_for_plan/max_safe_path_cost" value="$(arg max_safe_path_cost)"/>
+    <param name="default_planning_pipeline" value="$(arg pipeline)" />
+    <param name="capabilities" value="$(arg capabilities)" />
+    <param name="disable_capabilities" value="$(arg disable_capabilities)" />
+
+    <!-- do not copy dynamics information from /joint_states to internal robot monitoring
+         default to false, because almost nothing in move_group relies on this information -->
+    <param name="monitor_dynamics" value="false" />
+
+    <!-- Publish the planning scene of the physical robot so that rviz plugin can know actual robot -->
+    <param name="planning_scene_monitor/publish_planning_scene" value="$(arg publish_monitored_planning_scene)" />
+    <param name="planning_scene_monitor/publish_geometry_updates" value="$(arg publish_monitored_planning_scene)" />
+    <param name="planning_scene_monitor/publish_state_updates" value="$(arg publish_monitored_planning_scene)" />
+    <param name="planning_scene_monitor/publish_transforms_updates" value="$(arg publish_monitored_planning_scene)" />
+
+    <!-- Trajectory Execution -->
+    <param name="moveit_controller_manager" value="moveit_ros_control_interface::MoveItControllerManager" />
+    <param name="moveit_manage_controllers" value="true"/>
+    <param name="trajectory_execution/allowed_execution_duration_scaling" value="1.2"/> 
+    <param name="trajectory_execution/allowed_goal_duration_margin" value="0.5"/> 
+    <param name="trajectory_execution/allowed_start_tolerance" value="0.01"/>
+    <param name="ros_control_namespace" value="/cube_stack_arm"/>
+
+    <remap from="robot_description" to="/cube_stack_arm/robot_description" />
+    <remap from="joint_states" to="/cube_stack_arm/joint_states"/>
+  </node>
+
+  <!-- RViz -->
+  <!-- <node name="cube_stack_moveit_rviz" pkg="rviz" type="rviz" respawn="false"
+        args="-d $(find cube_stack_env)/rviz/cube_world_moveit.rviz" output="screen">
+  </node> -->
+
+  <!--Setup manual control through GUI -->
+  <!-- <node name="rqt_joint_trajectory_controller" pkg="rqt_joint_trajectory_controller" type="rqt_joint_trajectory_controller">
+    <remap from="robot_description" to="/cube_stack_arm/robot_description" />
+  </node> -->
+
+</launch>

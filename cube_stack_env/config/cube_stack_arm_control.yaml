@@ -1,0 +1,69 @@
+cube_stack_arm:
+  joint_state_controller:
+    type: joint_state_controller/JointStateController
+    publish_rate: 50
+  
+  arm_position_controller:
+    type: position_controllers/JointGroupPositionController
+    joints: [arm_shoulder_pan_joint, arm_shoulder_lift_joint, arm_elbow_flex_joint, arm_wrist_flex_joint, gripper_joint]
+    #pid: {p: 100.0, i: 0.01, d: 10.0}
+    publish_rate: 50
+  
+  arm_effort_controller:
+    type: effort_controllers/JointGroupEffortController
+    joints: [arm_shoulder_pan_joint, arm_shoulder_lift_joint, arm_elbow_flex_joint, arm_wrist_flex_joint, gripper_joint]
+    #pid: {p: 100.0, i: 0.01, d: 10.0}
+    publish_rate: 50
+  
+  arm_trajectory_position_controller:
+    type: position_controllers/JointTrajectoryController
+    joints:
+      - arm_shoulder_pan_joint
+      - arm_shoulder_lift_joint
+      - arm_elbow_flex_joint
+      - arm_wrist_flex_joint
+
+  gripper_trajectory_position_controller:
+    type: position_controllers/JointTrajectoryController
+    joints:
+      - gripper_joint
+
+  arm_trajectory_effort_controller:
+    type: effort_controllers/JointTrajectoryController
+    joints:
+      - arm_shoulder_pan_joint
+      - arm_shoulder_lift_joint
+      - arm_elbow_flex_joint
+      - arm_wrist_flex_joint
+    gains:
+      arm_shoulder_pan_joint:
+        p: 100
+        d: 0
+        i: 1
+        i_clamp: 1
+      arm_shoulder_lift_joint:
+        p: 100
+        d: 0
+        i: 1
+        i_clamp: 1
+      arm_elbow_flex_joint:
+        p: 100
+        d: 0
+        i: 1
+        i_clamp: 1
+      arm_wrist_flex_joint:
+        p: 100
+        d: 0
+        i: 1
+        i_clamp: 1
+        
+  gripper_trajectory_effort_controller:
+    type: effort_controllers/JointTrajectoryController
+    joints:
+      - gripper_joint
+    gains:
+      gripper_joint:
+        p: 100
+        d: 10
+        i: 1
+        i_clamp: 1
