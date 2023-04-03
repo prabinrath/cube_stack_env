@@ -1,0 +1,11 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: cube_stack_env
+    relative_path: urdf/motion_planning/cube_stack.urdf
+    xacro_args: ""
+  SRDF:
+    relative_path: config/cube_stack_arm.srdf
+  CONFIG:
+    author_name: Prabin Kumar Rath
+    author_email: prath4@asu.edu
+    generated_timestamp: 1680485195

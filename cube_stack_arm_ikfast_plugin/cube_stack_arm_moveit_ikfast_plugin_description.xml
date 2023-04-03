@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<library path="lib/libcube_stack_arm_moveit_ikfast_plugin">
+  <class name="cube_stack_arm/IKFastKinematicsPlugin" type="cube_stack_arm::IKFastKinematicsPlugin" base_class_type="kinematics::KinematicsBase">
+    <description>IKFast61 plugin for closed-form kinematics of cube_stack arm</description>
+  </class>
+</library>
