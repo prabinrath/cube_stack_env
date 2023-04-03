@@ -5,6 +5,7 @@
   <arg name="world" default="$(find cube_stack_env)/worlds/cube.world"/>
 
   <!-- start Gazebo with an empty world -->
+  <env name="GAZEBO_MODEL_PATH" value="$(find cube_stack_env)/models"/>
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="use_sim_time" value="true"/>
     <arg name="debug" value="false"/>
