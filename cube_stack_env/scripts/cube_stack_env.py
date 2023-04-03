@@ -133,55 +133,7 @@ class CubeStackEnv(gym.Env):
             raise Exception('Model Reset Failed')
 
         # reset cubes
-        rospy.wait_for_service('/gazebo/set_link_state')
-        cube_link_names = ['cube_base::wood_cube_2_5cm_blue::link', 'cube_pick::wood_cube_2_5cm_red::link']
-        idx = random.choice([0,1])
-        try:
-            req = SetLinkStateRequest()
-            req.link_state.link_name = cube_link_names[idx]
-            pose = Pose()
-            dist = random.uniform(0.13, 0.18)
-            th = random.uniform(-np.pi/2, np.pi/2)
-            cube1_pos = (dist*np.cos(th), dist*np.sin(th))
-            pose.position.x = cube1_pos[0]
-            pose.position.y = cube1_pos[1]
-            pose.position.z = 0.0125
-            pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = 0, 0, 0, 1
-            req.link_state.pose = pose
-            req.link_state.reference_frame = 'world'
-            self.setlink_proxy(req)
-            req = SetLinkStateRequest()
-            req.link_state.link_name = cube_link_names[1-idx]
-            pose = Pose()
-            dist = random.uniform(0.13, 0.18)
-            th = random.uniform(-np.pi/2, np.pi/2)
-            cube2_pos = (dist*np.cos(th), dist*np.sin(th))
-            while abs(cube2_pos[0]-cube1_pos[0]) + abs(cube2_pos[1]-cube1_pos[1]) < 0.1:
-                dist = random.uniform(0.13, 0.18)
-                th = random.uniform(-np.pi/2, np.pi/2)
-                cube2_pos = (dist*np.cos(th), dist*np.sin(th))
-            pose.position.x = cube2_pos[0]
-            pose.position.y = cube2_pos[1]
-            pose.position.z = 0.0125
-            pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = 0, 0, 0, 1
-            req.link_state.pose = pose
-            req.link_state.reference_frame = 'world'
-            self.setlink_proxy(req)
-            if self.obstacle:
-                for i in range(self.num_obstacles):
-                    req = SetLinkStateRequest()
-                    req.link_state.link_name = 'obs_'+str(i+1)+'::obstacle_sphere'
-                    dist = random.uniform(0.13, 0.18)
-                    th = random.uniform(-np.pi/2, np.pi/2)
-                    obs_pos = (dist*np.cos(th), dist*np.sin(th))
-                    pose.position.x = obs_pos[0]
-                    pose.position.y = obs_pos[1]
-                    pose.position.z = i*0.3/self.num_obstacles + 0.15
-                    req.link_state.pose = pose
-                    req.link_state.reference_frame = 'world'
-                    self.setlink_proxy(req)
-        except:
-            raise Exception('Set Link State Failed')
+        self.reset_cubes()
             
         rospy.wait_for_service('/gazebo/unpause_physics')
         try:
@@ -202,6 +154,57 @@ class CubeStackEnv(gym.Env):
 
         # return obs, {}
         return obs
+    
+    def reset_cubes(self):
+        rospy.wait_for_service('/gazebo/set_link_state')
+        cube_link_info = [('cube_base::wood_cube_2_5cm_blue::link', 0.025), ('cube_pick::wood_cube_2_5cm_red::link', 0.0125)]
+        idx = random.choice([0,1])
+        try:
+            req = SetLinkStateRequest()
+            req.link_state.link_name = cube_link_info[idx][0]
+            pose = Pose()
+            dist = random.uniform(0.13, 0.18)
+            th = random.uniform(-np.pi/2, np.pi/2)
+            cube1_pos = (dist*np.cos(th), dist*np.sin(th))
+            pose.position.x = cube1_pos[0]
+            pose.position.y = cube1_pos[1]
+            pose.position.z = cube_link_info[idx][1]
+            pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = 0, 0, 0, 1
+            req.link_state.pose = pose
+            req.link_state.reference_frame = 'world'
+            self.setlink_proxy(req)
+            req = SetLinkStateRequest()
+            req.link_state.link_name = cube_link_info[1-idx][0]
+            pose = Pose()
+            dist = random.uniform(0.13, 0.18)
+            th = random.uniform(-np.pi/2, np.pi/2)
+            cube2_pos = (dist*np.cos(th), dist*np.sin(th))
+            while abs(cube2_pos[0]-cube1_pos[0]) + abs(cube2_pos[1]-cube1_pos[1]) < 0.1:
+                dist = random.uniform(0.13, 0.18)
+                th = random.uniform(-np.pi/2, np.pi/2)
+                cube2_pos = (dist*np.cos(th), dist*np.sin(th))
+            pose.position.x = cube2_pos[0]
+            pose.position.y = cube2_pos[1]
+            pose.position.z = cube_link_info[1-idx][1]
+            pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = 0, 0, 0, 1
+            req.link_state.pose = pose
+            req.link_state.reference_frame = 'world'
+            self.setlink_proxy(req)
+            if self.obstacle:
+                for i in range(self.num_obstacles):
+                    req = SetLinkStateRequest()
+                    req.link_state.link_name = 'obs_'+str(i+1)+'::obstacle_sphere'
+                    dist = random.uniform(0.13, 0.18)
+                    th = random.uniform(-np.pi/2, np.pi/2)
+                    obs_pos = (dist*np.cos(th), dist*np.sin(th))
+                    pose.position.x = obs_pos[0]
+                    pose.position.y = obs_pos[1]
+                    pose.position.z = i*0.3/self.num_obstacles + 0.15
+                    req.link_state.pose = pose
+                    req.link_state.reference_frame = 'world'
+                    self.setlink_proxy(req)
+        except:
+            raise Exception('Set Link State Failed')
     
     def get_marker(self, grip_pos):
         marker = Marker()

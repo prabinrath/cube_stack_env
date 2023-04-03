@@ -5,7 +5,8 @@ import geometry_msgs
 import numpy as np
 
 class MoveItHandler():
-    def __init__(self, robot_description='robot_description'):
+    def __init__(self, robot_description, z_offset):
+        self.z_offset = z_offset
         moveit_commander.roscpp_initialize(sys.argv)
         self.robot = moveit_commander.RobotCommander(robot_description=robot_description)
         self.scene = moveit_commander.PlanningSceneInterface()
@@ -21,7 +22,7 @@ class MoveItHandler():
         box_pose.pose.orientation.w = 1.0
         box_pose.pose.position.x = 0.0
         box_pose.pose.position.y = 0.0
-        box_pose.pose.position.z = -0.055
+        box_pose.pose.position.z = - self.z_offset - 0.005 
         box_name = "ground"
         self.scene.add_box(box_name, box_pose, size=(0.8,0.8,0.01))
         # back plane
@@ -30,7 +31,7 @@ class MoveItHandler():
         box_pose.pose.orientation.w = 1.0
         box_pose.pose.position.x = -0.15
         box_pose.pose.position.y = 0.0
-        box_pose.pose.position.z = 0.15
+        box_pose.pose.position.z = - self.z_offset + 0.2
         box_name = "back"
         self.scene.add_box(box_name, box_pose, size=(0.01,0.4,0.4))
     
@@ -45,7 +46,7 @@ class MoveItHandler():
             box_pose.pose.orientation.w = 1.0
             box_pose.pose.position.x = goal_position[0] + 0.06*np.sin(i*2*np.pi/self.n_pillars)
             box_pose.pose.position.y = goal_position[1] + 0.06*np.cos(i*2*np.pi/self.n_pillars)
-            box_pose.pose.position.z = -0.025
+            box_pose.pose.position.z = - self.z_offset + 0.025
             box_name = "pillar_obs_"+str(i)
             self.scene.add_box(box_name, box_pose, size=(0.01,0.01,0.05))
 
@@ -98,3 +99,18 @@ class MoveItHandler():
         self.move_arm.stop()
         self.move_arm.clear_pose_targets()
         return success
+
+    def add_obstacles(self, obs_poses):
+        for i in range(len(obs_poses)):
+            obs_pose = geometry_msgs.msg.PoseStamped()
+            obs_pose.header.frame_id = self.robot.get_planning_frame()
+            obs_pose.pose = obs_poses[i]
+            obs_pose.pose.position.z -= self.z_offset
+            obs_name = "static_obs_"+str(i)
+            # safe trajectories can be planned by just inflating the obstacle radius in planning scene
+            self.scene.add_sphere(obs_name, obs_pose, radius=0.03)
+    
+    def remove_obstacles(self, num_obs):
+        for i in range(num_obs):
+            obs_name = "static_obs_"+str(i)
+            self.scene.remove_world_object(obs_name)
