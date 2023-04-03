@@ -26,10 +26,11 @@ def main():
     #             verbose=1)
     
     # # print(model.policy)
-    # model.learn(total_timesteps=100000, log_interval=10)
+    # model.learn(total_timesteps=500000, log_interval=10)
     # model.save("sac_cube_stack")
 
-    model = SAC.load('sac_cube_stack_reacher')
+    model = SAC.load('sac_cube_stack')
+
     for e in range(15):
         # obs, _ = env.reset()
         obs = env.reset()

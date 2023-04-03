@@ -199,7 +199,7 @@ class CubeStackEnv(gym.Env):
                     obs_pos = (dist*np.cos(th), dist*np.sin(th))
                     pose.position.x = obs_pos[0]
                     pose.position.y = obs_pos[1]
-                    pose.position.z = i*0.3/self.num_obstacles + 0.15
+                    pose.position.z = i*0.3/self.num_obstacles + 0.2
                     req.link_state.pose = pose
                     req.link_state.reference_frame = 'world'
                     self.setlink_proxy(req)

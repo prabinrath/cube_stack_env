@@ -11,7 +11,8 @@ class MoveItHandler():
         self.robot = moveit_commander.RobotCommander(robot_description=robot_description)
         self.scene = moveit_commander.PlanningSceneInterface()
         self.move_arm = moveit_commander.MoveGroupCommander("arm", robot_description=robot_description)
-        self.move_arm.set_max_velocity_scaling_factor(0.2)
+        self.move_arm.set_max_velocity_scaling_factor(1.0)
+        self.move_arm.set_max_acceleration_scaling_factor(1.0)
         self.move_gripper = moveit_commander.MoveGroupCommander("gripper", robot_description=robot_description)
         print('Arm Reference: ', self.move_arm.get_pose_reference_frame(), '--->', self.move_arm.get_end_effector_link())
 
