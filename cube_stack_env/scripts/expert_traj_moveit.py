@@ -16,7 +16,7 @@ def main():
     robot_mp = MoveItHandler(robot_description='/cube_stack_arm/robot_description', z_offset=BASE_Z_OFFSET)
 
     robot_mp.home()
-    for itr in range(15):
+    for itr in range(5):
         rospy.wait_for_service('/gazebo/pause_physics')
         try:
             env.pause()

@@ -1,15 +1,13 @@
 import gym
-from gym.spaces import Dict, Box
+from gym.spaces import Box
 
 import numpy as np
 import time
 from threading import Lock
-import cv2
-from cv_bridge import CvBridge
 import random
 import copy
 
-from sensor_msgs.msg import Image, JointState
+from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 from std_srvs.srv import Empty
 from gazebo_msgs.srv import GetLinkState, SpawnModel, SetLinkState, SetLinkStateRequest, SetModelConfiguration, SetModelConfigurationRequest
@@ -27,16 +25,21 @@ class CubeStackEnv(gym.Env):
         rospy.init_node('cube_stack_env_'+str(random.randint(0,1e5)))
 
         self.action_space = Box(-1, 1, (5,), np.float32)
-        self.observation_space = Dict({"visual": Box(0, 255, (224, 224, 4), np.uint8), "joints": Box(-np.pi, np.pi, (13,), np.float32)})
-        self.rgb_img, self.depth_img = None, None
-        self.bridge = CvBridge()
-        self.observation = {"visual": np.zeros((224, 224, 4), dtype=np.uint8), "joints": np.zeros((13,), dtype=np.float32)}
+        self.obstacle = env_config['obstacle']
+        if self.obstacle:
+            # 10 for joint states (pos and vel), 3 for grip pos, 3 for cube pick, 3 for cube base, 9 for three obstacles
+            self.observation_space = Box(-np.pi, np.pi, (28,), np.float32)
+            self.observation = np.zeros((28,), dtype=np.float32)
+        else:
+            # 10 for joint states (pos and vel), 3 for grip pos, 3 for cube pick, 3 for cube base
+            self.observation_space = Box(-np.pi, np.pi, (19,), np.float32)
+            self.observation = np.zeros((19,), dtype=np.float32)
+        
         self.obs_lock = Lock()
         self.dist_threshold = env_config['dist_threshold']
         self.reward = None
         self.max_iter = env_config['max_iter']
-        self.iter = 0
-        self.obstacle = env_config['obstacle']
+        self.iter = 0        
         rospy.set_param('/use_sim_time', True)
 
         self.joint_pos_lims = {
@@ -53,12 +56,10 @@ class CubeStackEnv(gym.Env):
         self.pause = rospy.ServiceProxy('/gazebo/pause_physics', Empty) # reset gazebo
         self.reset_model = rospy.ServiceProxy('/gazebo/set_model_configuration', SetModelConfiguration) # set model joints to init positions
         self.agent_pub = rospy.Publisher('/cube_stack_arm/arm_effort_controller/command', Float64MultiArray, queue_size=2) # effort control
-        self.agent_rgb_sub = rospy.Subscriber('/depth_camera/rgb/image_raw', Image, self.rgb_callback) # rgb observation
-        self.agent_depth_sub = rospy.Subscriber('/depth_camera/depth/image_raw', Image, self.depth_callback) # depth observation
         self.joint_state_sub = rospy.Subscriber('/cube_stack_arm/joint_states', JointState, self.joint_state_callback, queue_size=2) # robot joint position observation
 
         if self.obstacle:
-            self.num_obstacles = env_config['num_obstacles']
+            self.num_obstacles = 3 # fixed
             assert(self.num_obstacles<=3)
             self.spawn_model_proxy = rospy.ServiceProxy('/gazebo/spawn_sdf_model', SpawnModel) # spawn obstacles
             self.obstacle_model_sdf = open(rospkg.RosPack().get_path('cube_stack_env')+'/worlds/obstacle_sphere.sdf', 'r').read()
@@ -72,26 +73,12 @@ class CubeStackEnv(gym.Env):
                 self.spawn_model_proxy('obs_'+str(i+1), self.obstacle_model_sdf, "", pose, 'world')
         # self.grip_viz = rospy.Publisher('/ee', Marker, queue_size=2)
     
-    def rgb_callback(self, msg):
-        img = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
-        img = cv2.resize(img, (224, 224))
-        self.obs_lock.acquire()
-        self.observation["visual"][:,:,:3] = img
-        self.obs_lock.release()
-
-    def depth_callback(self, msg):
-        img = self.bridge.imgmsg_to_cv2(msg)
-        img = cv2.resize(img, (224, 224))
-        self.obs_lock.acquire()
-        self.observation["visual"][:,:,3] = (img*255.0).astype(np.uint8)
-        self.obs_lock.release()
-    
     def joint_state_callback(self, msg):
         position = np.array([msg.position[2], msg.position[1], msg.position[0], msg.position[3], msg.position[4]])
         velocity = np.array([msg.velocity[2], msg.velocity[1], msg.velocity[0], msg.velocity[3], msg.velocity[4]])
         grip_pos = self.get_grip_pos('cube_stack_arm::arm_wrist_flex_link', np.array([[0.0],[0.0],[0.1]]))
         self.obs_lock.acquire()
-        self.observation["joints"] = np.concatenate((position, velocity, grip_pos), dtype=np.float32)
+        self.observation[:13] = np.concatenate((position, velocity, grip_pos), dtype=np.float32)
         self.obs_lock.release()
     
     def get_obs(self):
@@ -169,6 +156,10 @@ class CubeStackEnv(gym.Env):
             pose.position.x = cube1_pos[0]
             pose.position.y = cube1_pos[1]
             pose.position.z = cube_link_info[idx][1]
+            if 'red' in cube_link_info[idx][0]:
+                self.observation[13:16] = np.array([pose.position.x, pose.position.y, pose.position.z])
+            else:
+                self.observation[16:19] = np.array([pose.position.x, pose.position.y, pose.position.z])
             pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = 0, 0, 0, 1
             req.link_state.pose = pose
             req.link_state.reference_frame = 'world'
@@ -179,13 +170,17 @@ class CubeStackEnv(gym.Env):
             dist = random.uniform(0.13, 0.18)
             th = random.uniform(-np.pi/2, np.pi/2)
             cube2_pos = (dist*np.cos(th), dist*np.sin(th))
-            while abs(cube2_pos[0]-cube1_pos[0]) + abs(cube2_pos[1]-cube1_pos[1]) < 0.1:
+            while abs(cube2_pos[0]-cube1_pos[0]) + abs(cube2_pos[1]-cube1_pos[1]) < 0.12:
                 dist = random.uniform(0.13, 0.18)
                 th = random.uniform(-np.pi/2, np.pi/2)
                 cube2_pos = (dist*np.cos(th), dist*np.sin(th))
             pose.position.x = cube2_pos[0]
             pose.position.y = cube2_pos[1]
             pose.position.z = cube_link_info[1-idx][1]
+            if 'red' in cube_link_info[idx][0]:
+                self.observation[13:16] = np.array([pose.position.x, pose.position.y, pose.position.z])
+            else:
+                self.observation[16:19] = np.array([pose.position.x, pose.position.y, pose.position.z])
             pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = 0, 0, 0, 1
             req.link_state.pose = pose
             req.link_state.reference_frame = 'world'
@@ -200,6 +195,7 @@ class CubeStackEnv(gym.Env):
                     pose.position.x = obs_pos[0]
                     pose.position.y = obs_pos[1]
                     pose.position.z = i*0.3/self.num_obstacles + 0.2
+                    self.observation[19+i*3:19+(i+1)*3] = np.array([pose.position.x, pose.position.y, pose.position.z])
                     req.link_state.pose = pose
                     req.link_state.reference_frame = 'world'
                     self.setlink_proxy(req)
