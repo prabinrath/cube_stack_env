@@ -34,12 +34,15 @@ class CubeStackEnv(gym.Env):
             # 10 for joint states (pos and vel), 3 for grip pos, 3 for cube pick, 3 for cube base
             self.observation_space = Box(-np.pi, np.pi, (19,), np.float32)
             self.observation = np.zeros((19,), dtype=np.float32)
+
+        self.action = np.zeros((5,), dtype=np.float32) # for BC
         
         self.obs_lock = Lock()
         self.dist_threshold = env_config['dist_threshold']
         self.reward = None
         self.max_iter = env_config['max_iter']
         self.iter = 0        
+        self.variable_horizon = env_config['variable_horizon']
         rospy.set_param('/use_sim_time', True)
 
         self.joint_pos_lims = {
@@ -76,6 +79,7 @@ class CubeStackEnv(gym.Env):
     def joint_state_callback(self, msg):
         position = np.array([msg.position[2], msg.position[1], msg.position[0], msg.position[3], msg.position[4]])
         velocity = np.array([msg.velocity[2], msg.velocity[1], msg.velocity[0], msg.velocity[3], msg.velocity[4]])
+        self.action = np.array([msg.effort[2], msg.effort[1], msg.effort[0], msg.effort[3], msg.effort[4]])
         grip_pos = self.get_grip_pos('cube_stack_arm::arm_wrist_flex_link', np.array([[0.0],[0.0],[0.1]]))
         self.obs_lock.acquire()
         self.observation[:13] = np.concatenate((position, velocity, grip_pos), dtype=np.float32)
@@ -177,7 +181,7 @@ class CubeStackEnv(gym.Env):
             pose.position.x = cube2_pos[0]
             pose.position.y = cube2_pos[1]
             pose.position.z = cube_link_info[1-idx][1]
-            if 'red' in cube_link_info[idx][0]:
+            if 'red' in cube_link_info[1-idx][0]:
                 self.observation[13:16] = np.array([pose.position.x, pose.position.y, pose.position.z])
             else:
                 self.observation[16:19] = np.array([pose.position.x, pose.position.y, pose.position.z])
@@ -271,7 +275,10 @@ class CubeStackEnv(gym.Env):
             raise Exception('Pause Physics Failed')
         
         dist, reward = self.get_reward(action)
-        done = dist < self.dist_threshold
+        if self.variable_horizon: # essential for imitation learning
+            done = dist < self.dist_threshold
+        else:
+            done = False
         truncated = self.iter > self.max_iter
         # return obs, reward, done, truncated, {}
         return obs, reward, (done or truncated), {}

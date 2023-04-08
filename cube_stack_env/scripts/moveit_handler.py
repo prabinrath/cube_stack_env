@@ -89,16 +89,33 @@ class MoveItHandler():
         self.move_gripper.clear_pose_targets()
         return success
     
-    def home(self):
-        self.move_arm.set_named_target('home')
-        self.move_arm.set_goal_tolerance(0.001)
-        success = self.move_arm.go(wait=True)
-        if not success:
-            rospy.logwarn('Plan/Execution Failed')
+    def home(self, home_pos=None):
+        if home_pos==None:
+            self.move_arm.set_named_target('home')
+            self.move_arm.set_goal_tolerance(0.001)
+            success = self.move_arm.go(wait=True)
+            if not success:
+                rospy.logwarn('Plan/Execution Failed')
+            else:
+                rospy.loginfo('Reached Home')
+            self.move_arm.stop()
+            self.move_arm.clear_pose_targets()
         else:
-            rospy.loginfo('Reached Home')
-        self.move_arm.stop()
-        self.move_arm.clear_pose_targets()
+            self.move_arm.set_joint_value_target(home_pos[:4])
+            self.move_arm.set_goal_tolerance(0.001)
+            success = self.move_arm.go(wait=True)
+            self.move_gripper.set_joint_value_target([home_pos[4]])
+            self.move_gripper.set_goal_tolerance(0.0001)
+            success = self.move_gripper.go(wait=True) and success
+            if not success:
+                rospy.logwarn('Plan/Execution Failed')
+            else:
+                rospy.loginfo('Reached Home')
+            self.move_arm.stop()
+            self.move_arm.clear_pose_targets()
+            self.move_gripper.stop()
+            self.move_gripper.clear_pose_targets()
+        
         return success
 
     def add_obstacles(self, obs_poses):
