@@ -6,7 +6,7 @@
   <!-- Set essential parameters -->
   <param name="/cube_stack_arm/dynamixel_ids" value="1,2,3,4,5,"/>
   <param name="/cube_stack_arm/robot_description"
-        command="xacro $(arg model)"/>
+        command="xacro --inorder $(arg model)"/>
 
   <!--Setup TF -->
   <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" ns="/cube_stack_arm">
@@ -14,7 +14,7 @@
     <remap from="/joint_states" to="/cube_stack_arm/joint_states"/>
     <remap from="/robot_description" to="/cube_stack_arm/robot_description" />
   </node>
-  <node type="static_transform_publisher" name="static_transform_publisher" pkg="tf" args="0 0 0 0 0 0 world camera_link 100" />
+  <node type="static_transform_publisher" name="static_transform_publisher" pkg="tf" args="0.07 0 0.6 0 1.53 3.14 world camera_link 100" />
 
   <!-- Launch Dynamixel controller -->
   <node pkg="cube_stack_env" type="sync_read_write_node" name="sync_read_write_node"/>
