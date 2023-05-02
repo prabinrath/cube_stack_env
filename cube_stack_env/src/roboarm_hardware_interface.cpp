@@ -104,7 +104,7 @@ class RoboArm : public hardware_interface::RobotHW {
     short position_cmd[ids.size()];
     for(size_t i=0;i<ids.size();i++){
       position_cmd[i] = (1023.0/300.0)*(150.0-180.0/3.14*cmd[i]);
-      std::cout<<cmd[i]<<" "<<position_cmd[i]<<"\n";
+      ROS_INFO("Command: %d, Position_cmd: %d", cmd[i], position_cmd[i]);
     }
 
     uint8_t dxl_error = 0;
