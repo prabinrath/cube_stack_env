@@ -103,7 +103,10 @@ class RoboArm : public hardware_interface::RobotHW {
   void write(const ros::Time& time, const ros::Duration& period) override {
     short position_cmd[ids.size()];
     for(size_t i=0;i<ids.size();i++){
-      position_cmd[i] = (1023.0/300.0)*(150.0-180.0/3.14*cmd[i]);
+      position_cmd[i] = (1023.0/300.0)*(150.0-180.0/3.14*(-cmd[i]));
+      if(i==4){ // Presmatic input fixed for open/close
+        position_cmd[i] = cmd[i]>0.001 ? 320 : 511;
+      }
       ROS_INFO("Command: %lf, Pos_Cmd: %d", cmd[i], position_cmd[i]);
     }
 
@@ -184,9 +187,7 @@ class RoboArm : public hardware_interface::RobotHW {
           }
         }
 
-        for(size_t i=0;i<ids.size();i++){
-          cmd[i] = 0; pos[i] = 0; vel[i] = 0; eff[i] = 0;
-        }
+        ROS_INFO("Robot init success!");
       }
 
       ROS_INFO("Found %d Dynamixel IDs", (int)ids.size());
@@ -225,6 +226,9 @@ int main(int argc, char ** argv)
 
   ros::AsyncSpinner spinner(4, &queue);
   spinner.start();
+
+  ros::Duration(3).sleep(); // wait for controllers to start
+  ROS_INFO("Ready to take Commands");
 
   ros::Time ts_last = ros::Time::now();
   ros::Rate loop_rate(30);

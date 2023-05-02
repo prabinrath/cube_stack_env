@@ -20,7 +20,7 @@
   <!-- <node pkg="cube_stack_env" type="roboarm_custom_commander" name="roboarm_custom_commander"/> -->
 
   <!-- Launch Arm ros_control -->
-  <node ns="/cube_stack_arm" pkg="cube_stack_env" type="roboarm_hardware_interface" name="roboarm_hardware_interface"/>
+  <node ns="/cube_stack_arm" pkg="cube_stack_env" type="roboarm_hardware_interface" name="roboarm_hardware_interface" output="screen"/>
   <rosparam command="load"
             file="$(find cube_stack_env)/config/cube_stack_arm_control.yaml"/>
   <node name="cube_stack_arm_controller_spawner" pkg="controller_manager" type="spawner"
