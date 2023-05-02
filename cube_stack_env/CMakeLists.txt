@@ -16,6 +16,8 @@ find_package(catkin REQUIRED
     std_msgs
     message_generation
     dynamixel_sdk
+    hardware_interface
+    controller_manager
 )
 
 ################################################################################
@@ -47,6 +49,8 @@ catkin_package(
     roscpp
     std_msgs
     dynamixel_sdk
+    hardware_interface
+    controller_manager
 #  DEPENDS system_lib
 )
 
@@ -59,15 +63,19 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(sync_read_write_node src/roboarm_controller.cpp)
-add_dependencies(sync_read_write_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(sync_read_write_node ${catkin_LIBRARIES})
+add_executable(roboarm_custom_commander src/roboarm_custom_commander.cpp)
+add_dependencies(roboarm_custom_commander ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(roboarm_custom_commander ${catkin_LIBRARIES})
+
+add_executable(roboarm_hardware_interface src/roboarm_hardware_interface.cpp)
+add_dependencies(roboarm_hardware_interface ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(roboarm_hardware_interface ${catkin_LIBRARIES})
 
 ################################################################################
 # Install
 ################################################################################
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
-install(TARGETS sync_read_write_node
+install(TARGETS roboarm_custom_commander roboarm_hardware_interface
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

@@ -17,7 +17,7 @@
  * $ roscore
  *
  * Open terminal #2
- * $ rosrun cube_stack_env sync_read_write_node
+ * $ rosrun cube_stack_env roboarm_custom_commander
  *
  * Open terminal #3 (run one of below commands at a time)
  * $ rostopic pub /cube_stack_arm/sync_set_positions cube_stack_env/SyncSetPositions "{id:[1,2,3,4,5], position:[511,511,511,511,511]}" --once
@@ -88,7 +88,7 @@ void SyncSetPositionsCallback(const cube_stack_env::SyncSetPositions::ConstPtr &
 
 int main(int argc, char ** argv)
 {
-  ros::init(argc, argv, "sync_read_write_node");
+  ros::init(argc, argv, "roboarm_custom_commander");
 
   uint8_t dxl_error = 0;
   int dxl_comm_result = COMM_TX_FAIL;

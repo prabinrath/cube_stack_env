@@ -12,6 +12,8 @@
   <build_depend>roscpp</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>message_generation</build_depend>
+  <build_depend>controller_manager</build_depend>
+  <build_depend>hardware_interface</build_depend>
 
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>std_msgs</build_export_depend>
@@ -21,6 +23,8 @@
   <exec_depend>gazebo_grasp_plugin</exec_depend>
   <exec_depend>rqt_joint_trajectory_controller</exec_depend>
   <exec_depend>message_runtime</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>hardware_interface</exec_depend>
 
   <depend>dynamixel_sdk</depend>
 
