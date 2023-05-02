@@ -19,17 +19,17 @@ def main():
         }
     env = CubeStackEnv(env_config)
 
-    # model = SAC("MultiInputPolicy", 
-    #             env, 
-    #             buffer_size=10000,
-    #             batch_size=32,
-    #             verbose=1)
+    model = SAC("MultiInputPolicy", 
+                env, 
+                buffer_size=10000,
+                batch_size=32,
+                verbose=1)
     
-    # # print(model.policy)
-    # model.learn(total_timesteps=500000, log_interval=10)
-    # model.save("sac_cube_stack")
+    # print(model.policy)
+    model.learn(total_timesteps=200000, log_interval=10)
+    model.save("sac_cube_stack")
 
-    model = SAC.load('sac_cube_stack')
+    # model = SAC.load('sac_cube_stack')
 
     for e in range(15):
         # obs, _ = env.reset()
