@@ -10,18 +10,12 @@
   <arg name="capabilities" default=""/>
   <arg name="disable_capabilities" default=""/>
 
-  <!-- Robot Description and TF is set by the Hardware -->
+  <!-- Robot Description, TF and Controllers are set by the Hardware -->
 
   <!-- Load Planning Context -->
   <include file="$(find cube_stack_moveit_config)/launch/planning_context.launch">
     <arg name="robot_description" value="/cube_stack_arm/robot_description"/>
   </include>
-
-  <!--Spawns Controller for Hardware -->
-  <rosparam command="load"
-            file="$(find cube_stack_env)/config/cube_stack_arm_control.yaml"/>
-  <node name="cube_stack_arm_controller_spawner" pkg="controller_manager" type="spawner"
-    ns="/cube_stack_arm" args="joint_state_controller arm_trajectory_position_controller gripper_trajectory_position_controller"/>
 
   <group ns="move_group/planning_pipelines">
     <!-- OMPL -->
@@ -78,8 +72,8 @@
   </node>
 
   <!--Setup manual control through GUI -->
-  <node name="rqt_joint_trajectory_controller" pkg="rqt_joint_trajectory_controller" type="rqt_joint_trajectory_controller">
+  <!-- <node name="rqt_joint_trajectory_controller" pkg="rqt_joint_trajectory_controller" type="rqt_joint_trajectory_controller">
     <remap from="robot_description" to="/cube_stack_arm/robot_description" />
-  </node>
+  </node> -->
 
 </launch>
