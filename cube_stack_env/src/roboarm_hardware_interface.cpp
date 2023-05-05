@@ -107,7 +107,7 @@ class RoboArm : public hardware_interface::RobotHW {
       if(i==4){ // Presmatic input fixed for open/close
         position_cmd[i] = cmd[i]>0.001 ? 320 : 511;
       }
-      ROS_INFO("Command: %lf, Pos_Cmd: %d", cmd[i], position_cmd[i]);
+      // ROS_INFO("Command: %lf, Pos_Cmd: %d", cmd[i], position_cmd[i]);
     }
 
     uint8_t dxl_error = 0;
@@ -130,7 +130,7 @@ class RoboArm : public hardware_interface::RobotHW {
     dxl_comm_result = groupSyncWrite->txPacket();
     if (dxl_comm_result == COMM_SUCCESS) {
       for(size_t i=0;i<ids.size();i++){
-        ROS_INFO("setPosition : [ID:%d] [POSITION:%d]", ids[i], position_cmd[i]);
+        // ROS_INFO("setPosition : [ID:%d] [POSITION:%d]", ids[i], position_cmd[i]);
       }
     } else {
       ROS_ERROR("Failed to set position! Result: %d", dxl_comm_result);
@@ -180,7 +180,7 @@ class RoboArm : public hardware_interface::RobotHW {
         // Set Motor Max Speed
         for(size_t i=0;i<ids.size();i++){
           dxl_comm_result = packetHandler->write2ByteTxRx(
-            portHandler, ids[i], ADDR_MOVING_SPEED, 50, &dxl_error); // 901 corresponds to 100 rev/min
+            portHandler, ids[i], ADDR_MOVING_SPEED, 100, &dxl_error); // 901 corresponds to 100 rev/min
           if (dxl_comm_result != COMM_SUCCESS) {
             ROS_ERROR("Failed to enable torque for Dynamixel ID %d", ids[i]);
             return -1;

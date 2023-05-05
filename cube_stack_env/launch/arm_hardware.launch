@@ -20,10 +20,16 @@
   <!-- <node pkg="cube_stack_env" type="roboarm_custom_commander" name="roboarm_custom_commander"/> -->
 
   <!-- Launch Arm ros_control -->
-  <node ns="/cube_stack_arm" pkg="cube_stack_env" type="roboarm_hardware_interface" name="roboarm_hardware_interface"/>
+  <node ns="/cube_stack_arm" pkg="cube_stack_env" type="roboarm_hardware_interface" name="roboarm_hardware_interface">
+    <remap from="/cube_stack_arm/joint_states" to="/cube_stack_arm/slow_joint_states" />
+  </node>
   <rosparam command="load"
             file="$(find cube_stack_env)/config/cube_stack_arm_control.yaml"/>
   <node name="cube_stack_arm_controller_spawner" pkg="controller_manager" type="spawner" output="screen"
     ns="/cube_stack_arm" args="joint_state_controller arm_trajectory_position_controller gripper_trajectory_position_controller"/>
+  <node ns="/cube_stack_arm" name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" >
+    <rosparam param="rate">50</rosparam>
+    <rosparam param="source_list">["/cube_stack_arm/slow_joint_states"]</rosparam>
+  </node>
 
 </launch>
