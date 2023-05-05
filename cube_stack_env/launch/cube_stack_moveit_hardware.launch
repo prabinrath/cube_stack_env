@@ -4,7 +4,7 @@
   <arg name="model" default="$(find cube_stack_env)/urdf/cube_stack_arm.xacro"/>
   <arg name="world" default="$(find cube_stack_env)/worlds/cube.world"/>
   <arg name="pipeline" default="ompl" />
-  <arg name="allow_trajectory_execution" default="true"/>
+  <arg name="allow_trajectory_execution" default="false"/>
   <arg name="max_safe_path_cost" default="1"/>
   <arg name="publish_monitored_planning_scene" default="true"/>
   <arg name="capabilities" default=""/>
@@ -59,7 +59,7 @@
     <param name="moveit_manage_controllers" value="true"/>
     <param name="trajectory_execution/allowed_execution_duration_scaling" value="1.2"/> 
     <param name="trajectory_execution/allowed_goal_duration_margin" value="0.5"/> 
-    <param name="trajectory_execution/allowed_start_tolerance" value="0.01"/>
+    <param name="trajectory_execution/allowed_start_tolerance" value="0.1"/>
     <param name="ros_control_namespace" value="/cube_stack_arm"/>
 
     <remap from="robot_description" to="/cube_stack_arm/robot_description" />
@@ -67,9 +67,9 @@
   </node>
 
   <!-- RViz -->
-  <node name="cube_stack_moveit_rviz" pkg="rviz" type="rviz" respawn="false"
+  <!-- <node name="cube_stack_moveit_rviz" pkg="rviz" type="rviz" respawn="false"
         args="-d $(find cube_stack_env)/rviz/cube_world_moveit.rviz" output="screen">
-  </node>
+  </node> -->
 
   <!--Setup manual control through GUI -->
   <!-- <node name="rqt_joint_trajectory_controller" pkg="rqt_joint_trajectory_controller" type="rqt_joint_trajectory_controller">
