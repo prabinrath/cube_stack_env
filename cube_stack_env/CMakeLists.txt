@@ -71,11 +71,15 @@ add_executable(roboarm_hardware_interface src/roboarm_hardware_interface.cpp)
 add_dependencies(roboarm_hardware_interface ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(roboarm_hardware_interface ${catkin_LIBRARIES})
 
+add_executable(roboarm_custom_controller src/roboarm_custom_controller.cpp)
+add_dependencies(roboarm_custom_controller ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(roboarm_custom_controller ${catkin_LIBRARIES})
+
 ################################################################################
 # Install
 ################################################################################
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
-install(TARGETS roboarm_custom_commander roboarm_hardware_interface
+install(TARGETS roboarm_custom_commander roboarm_hardware_interface roboarm_custom_controller
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
