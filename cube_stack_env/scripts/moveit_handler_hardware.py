@@ -3,7 +3,7 @@ import rospy
 import moveit_commander
 import geometry_msgs
 import numpy as np
-from scipy.interpolate import CubicHermiteSpline
+from scipy.interpolate import CubicHermiteSpline, CubicSpline
 from std_msgs.msg import Float64MultiArray
 from sensor_msgs.msg import JointState
 
@@ -90,9 +90,9 @@ class MoveItHandler():
             box_pose.pose.orientation.w = 1.0
             box_pose.pose.position.x = goal_position[0] + 0.06*np.sin(i*2*np.pi/self.n_pillars)
             box_pose.pose.position.y = goal_position[1] + 0.06*np.cos(i*2*np.pi/self.n_pillars)
-            box_pose.pose.position.z = - self.z_offset + 0.03
+            box_pose.pose.position.z = - self.z_offset + 0.04
             box_name = "pillar_obs_"+str(i)
-            self.scene.add_box(box_name, box_pose, size=(0.01,0.01,0.06))
+            self.scene.add_box(box_name, box_pose, size=(0.01,0.01,0.08))
 
         self.move_arm.set_position_target(goal_position)
         self.move_arm.set_goal_tolerance(0.001)
@@ -140,9 +140,10 @@ class MoveItHandler():
                 data[i,2,:4] = np.array(point.accelerations)
             tx = np.linspace(0, 1, len(via_points))
             y = data[:,0,:]
-            dy = data[:,1,:]
-            interp = CubicHermiteSpline(tx, y, dy)
-            yq = interp(np.linspace(0, 1, 100))
+            # dy = data[:,1,:]
+            # interp = CubicHermiteSpline(tx, y, dy)
+            interp = CubicSpline(tx, y)
+            yq = interp(np.linspace(0, 1, 200))
             grab_pos = self.joint_states[-1]
             yq[:,4] = grab_pos
             for yi in yq:
@@ -152,7 +153,7 @@ class MoveItHandler():
                 while error > 0.2:
                     error = np.linalg.norm(yi-self.joint_states)
                     self.command_pub.publish(msg)               
-                    # rospy.sleep(self.scaling/1000) 
+                    rospy.sleep(self.scaling/1000) 
                 self.arm_command_bkp = yi
             rospy.sleep(2)
             return True

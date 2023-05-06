@@ -14,7 +14,7 @@ def main():
     goal_pos = [0.15, -0.1, -0.04+DUMMY_AXIS_OFFSET]
     robot_mp.move_to([goal_pos[0], goal_pos[1], goal_pos[2]])
     robot_mp.gripper_close()
-    goal_pos = [0.15, 0.1, 0.025+DUMMY_AXIS_OFFSET]
+    goal_pos = [0.1, -0.0, 0.025+DUMMY_AXIS_OFFSET]
     robot_mp.move_to([goal_pos[0], goal_pos[1], goal_pos[2]])
     robot_mp.gripper_open()
     robot_mp.home()
