@@ -97,7 +97,7 @@ class RoboArm {
     for(size_t i=0;i<ids.size();i++){
       position_cmd[i] = (1023.0/300.0)*(150.0-180.0/3.14*(-cmd[i]));
       if(i==4){ // Presmatic input fixed for open/close
-        position_cmd[i] = cmd[i]>0.001 ? 320 : 511;
+        position_cmd[i] = cmd[i]>0.001 ? 300 : 511;
       }
       // ROS_INFO("Command: %lf, Pos_Cmd: %d", cmd[i], position_cmd[i]);
     }
@@ -173,7 +173,7 @@ class RoboArm {
         // Set Motor Max Speed
         for(size_t i=0;i<ids.size();i++){
           dxl_comm_result = packetHandler->write2ByteTxRx(
-            portHandler, ids[i], ADDR_MOVING_SPEED, 100, &dxl_error); // 901 corresponds to 100 rev/min
+            portHandler, ids[i], ADDR_MOVING_SPEED, 50, &dxl_error); // 901 corresponds to 100 rev/min
           if (dxl_comm_result != COMM_SUCCESS) {
             ROS_ERROR("Failed to enable torque for Dynamixel ID %d", ids[i]);
             return -1;
@@ -199,10 +199,11 @@ class RoboArm {
     }
 
     void command_callback(const std_msgs::Float64MultiArray& msg) {
+      mtx.lock();
       for(size_t i=0;i<ids.size();i++){
         cmd[i] = msg.data[i];
       }
-      write();
+      mtx.unlock();
     }
 
     PortHandler *portHandler = PortHandler::getPortHandler(DEVICE_NAME);
@@ -237,7 +238,7 @@ int main(int argc, char ** argv)
   while (ros::ok())
   {
     robot.read();
-    // robot.write();
+    robot.write();
     loop_rate.sleep();
   }
 
