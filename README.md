@@ -51,6 +51,7 @@ Our policy network and training algorithm are not well-suited for a vision-based
 | Multimodal Policy Before Training     | Multimodal Policy After Training    |
 | ------------ | ------------ |
 | ![GIF 1](media/sac-before.gif) | ![GIF 2](media/sac-after.gif) |
+
 The policy successfully learns to reach the red cube from visual inputs and joint states
 
 ### Run with Gazebo
