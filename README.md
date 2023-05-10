@@ -40,13 +40,17 @@ The Gazebo simulations use `position_controllers/JointTrajectoryController` from
 
 ### Run with Gazebo
 ```bash
+# Terminal 1
 roslaunch cube_stack_env cube_stack_moveit_gazebo.launch
+# Terminal 2
+cd <git-root-folder>/cube_stack_env
+python scripts/expert_traj_moveit.py
 ```
 
 ## Reinforcement Learning
 We created a Gym-compatible environment to enable RL with Gazebo, drawing heavily on the [gym_gazebo](https://github.com/erlerobot/gym-gazebo) package. For our experiments, we trained a Soft Actor Critic (SAC) torque control policy using the [Stable-Baselines3](https://stable-baselines3.readthedocs.io/en/master/) package for the random reaching task. The observation space is multimodal, incorporating RGBD camera input as well as the robot's joint state input. We used a `MultiInputPolicy` policy from sb3 and trained it for 200,000 simulation steps, rewarding the agent for moving the end-effector as close as possible to the red cube.
 
-Our policy network and training algorithm are not well-suited for a vision-based, goal-oriented RL task, which is why we couldn't learn a pick and place policy. This repository has another branch named `mlp-policy` that implements a straightforward MLP policy with an observation that includes joint states, cube location, and end-effector position. This policy performs better than the CNN-based multimodal policy due to the simplicity of the observation space. Additionally, we experimented with imitation learning algorithms trained on the expert MoveIt trajectories using the [imitation](https://imitation.readthedocs.io/en/latest/index.html) package, but the results were not very promising. For the future work we aim to improve this project in the direction of robot learning.
+Our policy network and training algorithm are not well-suited for a vision-based, goal-oriented RL task, which is why we couldn't learn a pick and place policy. This repository has another branch named `mlp-policy` that implements a straightforward MLP policy with an observation that includes joint states, cube location, and end-effector position. The MLP policy performs better than the CNN-based multimodal policy due to the simplicity of the observation space. Additionally, we experimented with imitation learning algorithms trained on the expert MoveIt trajectories using the [imitation](https://imitation.readthedocs.io/en/latest/index.html) package, but the results were not very promising. For the future work we aim to improve this project in the direction of robot learning.
 
 | Multimodal Policy Before Training     | Multimodal Policy After Training    |
 | ------------ | ------------ |
