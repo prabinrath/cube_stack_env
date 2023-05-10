@@ -55,7 +55,8 @@ Our policy network and training algorithm are not well-suited for a vision-based
 | Multimodal Policy Before Training     | Multimodal Policy After Training    |
 | ------------ | ------------ |
 | ![GIF 1](media/sac-before.gif) | ![GIF 2](media/sac-after.gif) |
-| The policy successfully learns to reach the red cube from visual inputs and joint states |
+
+The policy successfully learns to reach the red cube from visual inputs and joint states
 
 ### Run with Gazebo
 Change the argument `control="effort"` in `cube_stack_arm.xacro` ln 8 to run the simulation in torque control mode.
